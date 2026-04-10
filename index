@@ -1,0 +1,1254 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  Users, Briefcase, Award, CheckCircle, XCircle, 
+  Upload, UserPlus, Target, Settings, AlertCircle, 
+  Trash2, RotateCcw, MessageSquare, Sparkles,
+  PlayCircle, Search, ArrowRightLeft, TrendingUp, UserCheck, Check, AlertTriangle, BarChart3
+} from 'lucide-react';
+
+// --- 스크롤바 스타일 ---
+const scrollbarStyle = `
+  .custom-scroll::-webkit-scrollbar { width: 6px; }
+  .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+  .custom-scroll::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 6px; }
+  .custom-scroll:hover::-webkit-scrollbar-thumb { background: #7dd3fc; }
+`;
+
+// --- 1. 조직도 및 직무 데이터 ---
+const JOB_DATABASE = {
+  "가스솔루션본부": [
+    { id: "SP-001", title: "안전기획", dept: "공급솔루션", band: "B2(5)", exp: "공급시설 안전 및 유지관리, 배관설계, 인허가등", certs: ["토목기사", "토목산업기사", "토목재료기능사", "일반기계기사", "일반기계산업기사", "가스기사", "가스산업기사", "가스기능사"], majors: ["토목", "기계설비", "화공", "공학계열"], keywords: ["도시가스사업법", "도로법", "건설산업기본법", "산업안전보건"], relatedJobs: ["안전운영", "산업안전보건환경", "상황관리", "공급시설안전관리", "검측관리"] },
+    { id: "SS-004", title: "안전운영", dept: "공급솔루션", band: "B2(5)", exp: "공급시설안전관리, 검측/시공관리 등 유·연관 직무 통합 3년 이상", certs: ["토목기사", "일반기계기사", "가스기사", "가스산업기사", "건설재료시험기사", "건설기계기사", "산업안전기사"], majors: ["토목", "기계", "화공", "건축", "공학계열"], keywords: ["도시가스사업법", "KGS Code", "건설기술진흥법", "산업안전보건"], relatedJobs: ["안전기획", "상황관리", "공급시설안전관리", "정압기", "CNG충전소"] },
+    { id: "SP-002", title: "산업안전보건환경", dept: "공급솔루션", band: "B2(5)", exp: "정압기 직무 3년 이상 우대", certs: ["전기기능사", "전기산업기사", "전기기사", "전기공사기사", "전기공사산업기사"], majors: ["전기", "전자", "통신"], keywords: ["도시가스사업법", "전기사업법", "정보통신기반 보호법", "원격감시시설관리지침"], relatedJobs: ["안전기획", "사업장안전및보안", "권역내 사업운영"] },
+    { id: "SO-009", title: "CNG충전소", dept: "공급솔루션", band: "B2(5)", exp: "안전관리 직무 2년 이상", certs: ["측량기능사", "사무자동화산업기사"], majors: ["전공무관"], keywords: ["도면 판독", "탐사/측량 장비 활용", "프로그램 활용"], relatedJobs: ["안전운영", "공급시설안전관리", "정압기"] },
+    { id: "SS-005", title: "상황관리", dept: "공급솔루션", band: "B3(6)", exp: "검측관리/천공, 설계 2년 이상", certs: ["토목기사", "토목산업기사", "가스기사", "가스산업기사", "가스기능사"], majors: ["토목공학", "화학공학", "공학계열"], keywords: ["도로, 하천, 공유재산 등 관계법령", "인허가 행정 절차", "커뮤니케이션 스킬"], relatedJobs: ["안전기획", "안전운영", "공급시설안전관리", "검측관리"] },
+    { id: "SO-014", title: "검측관리", dept: "공급솔루션", band: "B2(4)", exp: "공급시설안전관리 3년", certs: ["가스산업기사", "가스기사", "산업안전기사", "일반기계기사", "전기기사"], majors: ["전공무관", "공학계열"], keywords: ["고압가스법", "안전관리규정", "KGS Code", "CNG충전소 기기설비"], relatedJobs: ["공급시설안전관리", "배관탐사/측량", "사용시설관리", "상황관리", "설계", "안전기획", "인허가", "계약", "권역내 사업개발"] },
+    { id: "SP-003", title: "배관망분석", dept: "기술혁신", band: "B2(5)", exp: "정압기, 설계, 검측 등 직무 경험 3년 이상", certs: ["가스기능사", "에너지관리기사", "가스기사", "일반기계기사"], majors: ["기계공학", "화학공학", "에너지공학"], keywords: ["관말압력", "수요예측", "배관망해석", "유체역학"], relatedJobs: ["정압기", "설계", "검측관리", "GIS"] },
+    { id: "SO-010", title: "전기방식", dept: "기술혁신", band: "B1(3)", exp: "사용시설 안전관리 1년 이상", certs: ["가스안전관리", "산업안전산업기사", "국제전기방식기술", "전기방식기술자"], majors: ["건축공학", "환경공학", "산업안전공학", "경영학"], keywords: ["산업안전보건법", "개인정보보호법", "보안 시스템 방식 및 구조 이해"], relatedJobs: ["정밀안전진단", "공급시설안전관리", "배관탐사/측량"] },
+    { id: "SO-011", title: "정밀안전진단", dept: "기술혁신", band: "B1(2)", exp: "자가운전 6개월 이상", certs: ["운전면허 1종 대형", "운전면허1종보통", "안전점검원양성교육이수", "안전점검원교육이수", "가스기사", "가스산업기사", "가스기능사", "가스기술사", "가스기능장", "고압가스기능사"], majors: ["화공", "토목", "기계", "산업안전"], keywords: ["도시가스사업법", "안전관리규정", "KGS Code"], relatedJobs: ["전기방식", "공급시설안전관리", "검측관리"] },
+    { id: "SO-012", title: "정압기", dept: "기술혁신", band: "B1(3)", exp: "도시가스 안전관리 현장 직무 3년 이상", certs: ["안전점검원양성교육이수", "안전점검원교육이수", "가스기사", "산업안전기사", "일반기계기사", "전기기사", "공조냉동기계기사", "설비보전기사"], majors: ["전공무관", "공학계열"], keywords: ["도시가스사업법", "안전관리규정", "한국가스안전공사 기술기준 코드집"], relatedJobs: ["공급시설안전관리", "원격감시시설", "배관망분석"] },
+    { id: "SO-013", title: "원격감시시설", dept: "기술혁신", band: "B2(4)", exp: "제한없음", certs: ["안전점검원양성교육이수", "안전점검원교육이수", "운전면허 1종 보통", "가스기능사", "전기기능사", "전기산업기사", "전기기사"], majors: ["전공무관"], keywords: ["도시가스사업법", "KGS FS551", "KGS GC202"], relatedJobs: ["정압기", "IT운영", "안전운영"] },
+    { id: "SS-008", title: "시공관리", dept: "공무솔루션", band: "B3(6)", exp: "공무솔루션팀 2년 이상, 패트롤 3년이상, 에너지혁신지원 2년 이상", certs: ["가스기능사", "가스산업기사", "가스안전관리자", "가스시설시공관리자"], majors: ["건축", "토목", "기계"], keywords: ["도시가스 공급규정", "안전관리규정", "도시가스사업법", "도로법", "하수도법"], relatedJobs: ["검측관리", "설계", "인허가"] },
+    { id: "SS-006", title: "설계", dept: "공무솔루션", band: "B2(4)", exp: "안전관리 직무 10년 이상", certs: ["안전점검원양성교육이수", "안전점검원교육이수", "가스기사", "산업안전기사", "일반기계기사", "토목기사", "전산응용건축제도기능사", "AutoCAD 2급"], majors: ["전공무관", "공학계열"], keywords: ["도시가스사업법 전문지식", "고객가치혁신 직무 이해"], relatedJobs: ["GIS", "검측관리", "인허가", "배관망분석"] },
+    { id: "SS-007", title: "인허가", dept: "공무솔루션", band: "B2(5)", exp: "공급시설 안전관리 직무 2년 이상", certs: ["가스산업기사"], majors: ["전공무관", "자연/공학계열"], keywords: ["도시가스 배관 유지관리", "탐사/측량 장비 운용", "도시가스 준공도면 해석", "전기방식 이해"], relatedJobs: ["검측관리", "설계", "권역내 사업개발"] },
+    { id: "SO-017", title: "배관탐사/측량", dept: "디지털배관TF", band: "B2(4)", exp: "제한없음", certs: ["안전점검원양성교육이수", "안전점검원교육이수", "자동차운전면허증 2종보통", "가스기능사", "가스산업기사", "전기기능사", "전기기사", "측량기능사"], majors: ["화학공학", "전기공학", "공학계열"], keywords: ["도시가스사업법", "GC-202", "KGS-FS551"], relatedJobs: ["검측관리", "GIS", "공급시설안전관리"] },
+    { id: "SO-018", title: "GIS", dept: "디지털배관TF", band: "B2(4)", exp: "공급시설관리 2년 이상 우대", certs: ["안전점검원양성교육이수", "안전점검원교육이수", "가스기능사", "가스산업기사", "가스기사"], majors: ["기계", "화공", "토목"], keywords: ["도시가스사업법", "KGS FS551", "KGS FS552"], relatedJobs: ["설계", "배관탐사/측량", "IT운영"] },
+    { id: "SO-015", title: "공급시설안전관리", dept: "패트롤", band: "B1(2)", exp: "도시가스 안전관리 현장 직무 3년 이상", certs: ["안전점검원양성교육이수", "안전점검원교육이수", "ISO9001예비심사원", "Iso45001:2018 국제심사원", "가스기사", "산업안전기사", "일반기계기사", "전기기사", "토목기사"], majors: ["전공무관", "공학계열"], keywords: ["도시가스사업법", "안전관리규정", "KGS Code", "국제표준규격"], relatedJobs: ["사용시설관리", "검측관리", "정압기", "상황관리"] },
+    { id: "SO-016", title: "사용시설관리", dept: "패트롤", band: "B2(3)", exp: "제한없음", certs: ["산업안전산업기사", "산업안전기사"], majors: ["전공무관", "안전공학"], keywords: ["산업안전보건법", "중대재해처벌법", "환경오염시설법", "산업재해보상보험법"], relatedJobs: ["공급시설안전관리", "검측관리", "요금솔루션"] }
+  ],
+  "에너지솔루션본부": [
+    { id: "BP-058", title: "권역내 사업개발", dept: "에너지혁신지원", band: "B2(4)", exp: "개발 관련 2년 이상, 안전, 설비관리, 설계, 시공 등 관련 업무 3년 이상", certs: ["자동차운전면허증 1종보통", "자동차운전면허증 2종보통", "가스산업기사", "에너지관리기사"], majors: ["전공무관", "상경계열", "공학계열"], keywords: ["에너지 시장 동향", "신재생 정책", "사업개발 전략", "계약·법률 검토"], relatedJobs: ["인허가", "채권관리", "권역내 사업기획"] },
+    { id: "BP-059", title: "권역내 사업기획", dept: "에너지혁신지원", band: "B2(5)", exp: "전기/열 정산·회계·약관 업무 2년 이상, 기획 전략 2년 이상", certs: ["전기기사", "에너지관리기사", "회계관리 1급", "가스산업기사"], majors: ["이공계열", "상경계열", "공학계열"], keywords: ["전력거래소 운영규칙", "전기공급약관", "SAP 회계 프로세스", "도시가스사업법"], relatedJobs: ["권역내 사업운영", "전략기획", "권역내 사업개발"] },
+    { id: "BO-063", title: "권역내 사업운영", dept: "에너지O&M TF", band: "B3(6)", exp: "플랜트 및 산업안전 업무 경력 2년 이상", certs: ["전기기사", "에너지관리기사", "일반기계기사"], majors: ["전기공학", "에너지공학", "기계공학", "산업안전"], keywords: ["산업안전", "플랜트설비 및 시스템", "열병합발전"], relatedJobs: ["산업안전보건환경", "권역내 사업기획", "정압기"] },
+    { id: "BP-060", title: "권역내외 사업개발_LPG", dept: "에너지솔루션", band: "B2(5)", exp: "사업개발 직무 합산 2년 이상", certs: ["가스기능사", "가스산업기사", "가스기사", "컴퓨터활용능력 1급", "컴퓨터활용능력 2급"], majors: ["화학공학", "기계공학", "에너지관련"], keywords: ["국제 에너지 동향", "가스/안전 관련 법규", "KGS CODE"], relatedJobs: ["권역내외 사업운영_LPG", "권역내 사업개발"] },
+    { id: "BP-061", title: "권역내외 사업개발_태양광", dept: "에너지솔루션", band: "B2(5)", exp: "사업운영관리 분야 합산 1년 이상", certs: ["전기기사", "전기산업기사", "일반기계기사", "신재생에너지발전설비기능사"], majors: ["전기공학", "건축공학", "경영학"], keywords: ["태양광영업", "부지확보", "인허가대응", "임대차계약"], relatedJobs: ["권역내외 사업운영_태양광", "권역내 사업개발"] },
+    { id: "BO-063-2", title: "권역내외 사업운영_태양광", dept: "에너지솔루션", band: "B1(3)", exp: "사업운영관리 분야 합산 1년 이상", certs: ["전기기사", "전기산업기사", "일반기계기사", "신재생에너지발전설비기능사"], majors: ["전기공학", "기계공학", "에너지관련"], keywords: ["전기사업법", "신재생에너지 정책", "에너지산업 트렌드"], relatedJobs: ["권역내외 사업개발_태양광", "권역내 사업운영"] },
+    { id: "BO-062", title: "권역내외 사업운영_LPG", dept: "에너지솔루션", band: "B1(3)", exp: "사업개발 직무 합산 2년 이상", certs: ["가스기능사", "가스산업기사", "가스기사", "컴퓨터활용능력 1급", "컴퓨터활용능력 2급"], majors: ["화학공학", "기계공학", "에너지관련"], keywords: ["국제 에너지 동향", "가스/안전 법규", "KGS CODE"], relatedJobs: ["권역내외 사업개발_LPG", "CNG충전소"] },
+    { id: "BP-057", title: "권역내외 사업기획", dept: "사업전략TF", band: "B2(5)", exp: "사업운영 1년 이상, 에너지 사업기획 3년 이상", certs: ["재경관리사", "가스기사", "에너지관리기사", "전기기사"], majors: ["경영학", "회계학", "에너지공학", "상경계열", "공학계열"], keywords: ["경제성평가", "재무/회계", "에너지 정책 해석", "사업모델 설계"], relatedJobs: ["자금관리", "전략기획", "권역내외 사업운영"] },
+    { id: "BO-065", title: "권역내외 사업운영", dept: "사업전략TF", band: "B2(4)", exp: "신규사업 현장 세팅 및 운영 관리 2년 이상", certs: ["일반기계기사", "전기기사", "가스기사"], majors: ["경영학", "회계학"], keywords: ["재무관리", "회계", "법무", "행정", "집단에너지사업법", "신재생에너지법"], relatedJobs: ["사업포트폴리오관리", "컴플라이언스", "재무기획", "권역내외 사업기획", "권역내 사업운영"] },
+    { id: "BP-056", title: "권역내외 사업개발_통합", dept: "에너지사업개발", band: "B2(4)", exp: "도시가스 및 에너지 영업 3년 이상, 투자심의/컨설팅 경험", certs: ["가스기사", "에너지관리기사", "전기기사"], majors: ["전공무관", "상경계열", "공학계열"], keywords: ["통합에너지 기술적 이해", "도시가스 및 집단에너지 공급규정", "에너지효율 정책", "사업 타당성 분석"], relatedJobs: ["권역내외 사업기획", "권역내 사업개발"] }
+  ],
+  "경영기획본부": [
+    { id: "MP-019", title: "전략기획", dept: "경영전략", band: "B2(5)", exp: "전략기획, 정책기획, 사업포트폴리오관리, 재무기획, 회계관리 합산 2년 이상", certs: ["회계관리 1급", "회계관리 2급", "재경관리사", "미국공인회계사", "전산회계 1급", "전산세무 2급"], majors: ["경영", "경제", "상경계열"], keywords: ["주요 관계 법령", "경영환경 변화", "경영관리 트렌드"], relatedJobs: ["사업포트폴리오관리", "정책기획", "재무기획"] },
+    { id: "MP-020", title: "사업포트폴리오관리", dept: "경영전략", band: "B2(5)", exp: "투자기획, 투자관리, 전략기획 합산 2년 이상", certs: ["회계관리 1급", "회계관리 2급", "재경관리사", "전산회계 1급", "전산세무 2급", "전산회계운용사 2급"], majors: ["경영", "경제", "상경계열"], keywords: ["관리/원가/재무회계", "상법/상증법/세법", "경영전략/시장 분석"], relatedJobs: ["전략기획", "권역내외 사업운영"] },
+    { id: "MP-021", title: "정책기획", dept: "경영전략", band: "B2(4)", exp: "전략기획, 재무/원가회계 관련 최소 5년 이상", certs: ["미국공인회계사"], majors: ["경영", "경제", "회계", "신문방송학", "상경계열"], keywords: ["회계/재무 지식", "도시가스사업법", "공사/검침/점검 프로세스", "미디어 산업"], relatedJobs: ["전략기획", "회계관리", "세무관리"] },
+    { id: "MS-030", title: "컴플라이언스", dept: "경영전략", band: "B2(5)", exp: "산업안전보건환경, 노무, 개인정보보호 합산 2년 이상", certs: [], majors: ["법학", "행정학", "상경계열"], keywords: ["법률 및 규제 지식", "지적재산권(IP)"], relatedJobs: ["노무", "계약", "권역내외 사업운영"] },
+    { id: "MS-031", title: "자금관리", dept: "재무전략", band: "B2(4)", exp: "자금 및 금융 관련업무 수행 2년이상", certs: ["미국공인회계사", "재무위험관리사", "AFPK", "투자자산운용사", "증권투자상담사"], majors: ["경영학", "경제학", "상경계열"], keywords: ["회계지식", "재무지식"], relatedJobs: ["재무기획", "권역내외 사업기획"] },
+    { id: "MS-032", title: "회계관리", dept: "재무전략", band: "B1(3)", exp: "기초 회계처리 및 결산 수행", certs: ["미국공인회계사", "재경관리사", "IFRS관리사", "전산세무 2급", "회계관리 1급"], majors: ["경영학", "회계학", "세무학", "경제학", "상경계열"], keywords: ["재무회계", "회계기준(K-IFRS)"], relatedJobs: ["세무관리", "재무기획"] },
+    { id: "MS-033", title: "세무관리", dept: "재무전략", band: "B1(3)", exp: "기초 세금 신고 업무 수행 2년 이상", certs: ["미국공인회계사", "재경관리사", "IFRS관리사", "전산세무 2급", "회계관리 1급"], majors: ["경영학", "회계학", "세무학", "경제학", "상경계열"], keywords: ["법인세법", "부가세법", "소득세법", "K-IFRS", "세무조정"], relatedJobs: ["회계관리", "정책기획"] },
+    { id: "MP-022", title: "재무기획", dept: "재무전략", band: "B2(5)", exp: "회계, 세무, 자금 업무 수행 최소 3년 이상", certs: [], majors: ["경영학", "회계학", "세무학", "경제학", "상경계열"], keywords: ["회계기준", "세법", "상법"], relatedJobs: ["전략기획", "자금관리", "회계관리", "권역내외 사업운영"] },
+    { id: "MP-024", title: "IT기획", dept: "IT솔루션", band: "B2(5)", exp: "IT운영 2년 이상", certs: ["정보처리기사"], majors: ["컴퓨터공학", "소프트웨어공학", "정보통신공학", "IT계열"], keywords: ["프로그래밍", "데이터베이스", "네트워크", "클라우드"], relatedJobs: ["IT운영", "데이터분석"] },
+    { id: "MS-045", title: "IT운영", dept: "IT솔루션", band: "B2(5)", exp: "IT직무, AI직무, 기획/운영 직무", certs: ["정보처리기사", "정보처리산업기사", "SQL개발자", "AWS Certified Solutions Architect - Associate", "CCNA", "SCJP"], majors: ["컴퓨터공학", "소프트웨어공학", "정보통신공학", "IT계열"], keywords: ["프로그래밍", "데이터베이스", "네트워크", "클라우드"], relatedJobs: ["IT기획", "정보보호"] },
+    { id: "MS-046", title: "개인정보보호", dept: "IT솔루션", band: "B2(5)", exp: "정보보안, 컴플라이언스, 고객정보관리", certs: ["개인정보관리사", "정보보호및개인정보보호관리체계인증심사원"], majors: ["전공무관", "법학", "정보보안"], keywords: ["개인정보보호법", "정보통신망법"], relatedJobs: ["정보보호", "컴플라이언스"] },
+    { id: "MS-047", title: "정보보호", dept: "IT솔루션", band: "B2(5)", exp: "IT운영, IT기획 2년 이상", certs: ["정보보호및개인정보보호관리체계인증심사원"], majors: ["컴퓨터공학", "정보통신공학", "정보보안"], keywords: ["개인정보보호법", "정보통신망법", "ISMS-P"], relatedJobs: ["개인정보보호", "IT운영"] },
+    { id: "MP-025", title: "AI기획", dept: "AI솔루션", band: "B3(6)", exp: "다양한 도메인 업무 경험 3개분야 이상, 분석 경험 5건/2년 이상", certs: ["빅데이터분석기사", "데이터 분석 준전문가", "인공지능자격(전문가)"], majors: ["이공계열", "전공무관"], keywords: ["비즈니스 프로세스 분석", "생성형 AI", "LLM", "데이터기반 의사결정", "마케팅"], relatedJobs: ["데이터분석", "AI,DT솔루션", "IT기획"] },
+    { id: "MS-048", title: "데이터분석", dept: "AI솔루션", band: "B2(4)", exp: "데이터 분석(AI모델링 포함) 또는 SQL 개발 경력 2년 이상", certs: ["빅데이터분석기사", "데이터 분석 준전문가", "SQL개발자"], majors: ["이공계열", "전공무관", "AI전공 석사"], keywords: ["데이터 마이닝", "MLOps", "데이터 시각화", "Airflow"], relatedJobs: ["AI플랫폼", "AI,DT솔루션", "IT기획"] },
+    { id: "MS-049", title: "AI플랫폼", dept: "AI솔루션", band: "B2(4)", exp: "(DW/Mart)SQL 개발 / 데이터 PipeLine 개발 경력 2년 이상", certs: ["정보처리기사", "AWS Certified Solutions Architect - Associate"], majors: ["컴퓨터공학", "소프트웨어학", "정보통신공학"], keywords: ["데이터 모델링", "Airflow", "Docker", "Kubernetes"], relatedJobs: ["데이터분석", "AI,DT솔루션", "IT운영"] },
+    { id: "MS-050", title: "AI,DT솔루션", dept: "AI솔루션", band: "B2(4)", exp: "AI/ML 기반 솔루션 기획·개발·운영 경험 2년 이상", certs: ["정보처리기사", "AWS Certified Solutions Architect - Associate", "데이터 분석 준전문가"], majors: ["컴퓨터공학", "소프트웨어학", "정보통신공학"], keywords: ["Generative AI", "LLM", "DevOps", "MLOps"], relatedJobs: ["데이터분석", "AI플랫폼", "IT기획"] }
+  ],
+  "경영지원본부": [
+    { id: "MP-026", title: "인사기획", dept: "인사/조직문화", band: "B2(5)", exp: "인사기획, 평가/보상 직무 2년 이상", certs: ["공인노무사", "HRM전문가", "PHR"], majors: ["경영학", "행정학"], keywords: ["인사제도기획", "평가체계", "보상전략", "이동배치"], relatedJobs: ["인사운영", "인재육성", "조직문화", "노무", "급여보상"] },
+    { id: "MS-034", title: "인사운영", dept: "인사/조직문화", band: "B1(3)", exp: "무관", certs: ["공인노무사", "HRM전문가", "ERP 인사정보관리사 1급", "ERP 정보관리사(인사)"], majors: ["전공무관", "경영학", "행정학", "법학"], keywords: ["근로기준법", "노동법", "산업안전보건법", "계약·근태·채용"], relatedJobs: ["인사기획", "급여보상", "인재육성"] },
+    { id: "MS-035", title: "노무", dept: "인사/조직문화", band: "B2(5)", exp: "인사운영, 인사기획분야 3년 이상", certs: ["공인노무사"], majors: ["경영학", "법학", "행정학"], keywords: ["근로기준법", "노동조합 및 노동관계조정법", "산업안전보건법"], relatedJobs: ["인사기획", "컴플라이언스"] },
+    { id: "MP-023", title: "인사기획", dept: "인사/조직문화", band: "B2(5)", exp: "인사운영 포함 HR 직무 2년 이상", certs: ["공인노무사", "HRM전문가", "ERP 인사정보관리사 1급", "ERP 정보관리사(인사)"], majors: ["전공무관", "경영학", "법학"], keywords: ["노동법", "평가/보상 트렌드", "조직관리"], relatedJobs: ["인사운영", "인재육성", "조직문화", "노무", "급여보상"] },
+    { id: "MS-036", title: "인재육성", dept: "인사/조직문화", band: "B1(3)", exp: "스탭 부서 1년 이상", certs: ["공인노무사", "HRM전문가", "ERP 인사정보관리사 1급", "ERP 정보관리사(인사)"], majors: ["경영학", "교육학", "평생교육학", "심리학"], keywords: ["HRD", "교육 운영 실무", "법정 교육제도", "교육관리 시스템"], relatedJobs: ["인사기획", "조직문화", "인사운영"] },
+    { id: "MS-037", title: "조직문화", dept: "인사/조직문화", band: "B2(4)", exp: "조직문화, 커뮤니케이션 또는 HR 유관 업무 1년 이상", certs: ["프리젠테이션스킬지도사 1급", "서비스매니저 1급"], majors: ["전공무관", "경영학", "심리학", "커뮤니케이션학"], keywords: ["조직문화 진단", "변화관리", "기업가치 내재화"], relatedJobs: ["인재육성", "인사기획", "홍보마케팅"] },
+    { id: "MS-038", title: "급여보상", dept: "인사/조직문화", band: "B2(4)", exp: "인사운영 포함 HR 직무 2년 이상", certs: ["공인노무사", "HRM전문가", "급여관리사 자격증", "ERP 인사정보관리사 1급", "ERP 정보관리사(인사)"], majors: ["전공무관", "경영학", "회계학", "세무학", "경제학", "법학"], keywords: ["근로기준법", "소득세법", "퇴직급여보장법", "사회보험법령"], relatedJobs: ["인사운영", "회계관리", "세무관리"] },
+    { id: "MS-039", title: "계약", dept: "경영혁신지원", band: "B2(5)", exp: "검측관리/설계/시공관리 등 협력업체 평가 관리 업무 2년 이상", certs: ["가스기사", "가스산업기사", "가스기능사", "가스기술사", "가스기능장", "가스시설시공관리자", "가스안전관리자"], majors: ["법학", "행정학", "화학공학", "기계공학"], keywords: ["계약관련법", "도시가스사업법", "건설관련 법규", "산업안전보건법"], relatedJobs: ["구매", "컴플라이언스", "검측관리"] },
+    { id: "MS-040", title: "구매", dept: "경영혁신지원", band: "B1(3)", exp: "계약, 안전운영, 공급시설관리 1년 이상", certs: ["운전면허 1종보통", "유통관리사 1급", "유통관리사 2급", "산업안전기사"], majors: ["경영학", "유통/물류", "상경계열"], keywords: ["민법(계약)", "구매프로세스", "계약 및 원가관리", "납기/재고관리"], relatedJobs: ["계약", "자산운영"] },
+    { id: "MS-041", title: "자산관리", dept: "경영혁신지원", band: "B2(5)", exp: "자산 운영/구매 2년 이상", certs: ["운전면허 1종 보통", "공인중개사", "산업안전기사", "전산세무 2급", "전산응용건축제도기능사", "토목기사"], majors: ["전공무관", "경영학", "건축공학"], keywords: ["법인세법", "도로교통법", "건축법", "임대차법", "개발 행위 절차", "회계"], relatedJobs: ["자산운영", "회계관리"] },
+    { id: "MS-042", title: "자산운영", dept: "경영혁신지원", band: "B1(3)", exp: "공급시설안전관리, 사용시설안전관리, 사업장 안전 및 보안 1년", certs: ["자동차운전면허증 1종보통", "전기기능사", "2급 소방안전관리자", "소방안전관리자", "가스기능사", "산업안전산업기사"], majors: ["가스", "전기", "소방", "건축"], keywords: ["도로교통법", "산업안전보건법", "자동차 관리법", "시설물 관리"], relatedJobs: ["자산관리", "구매", "사업장안전및보안"] },
+    { id: "MS-043", title: "사업장안전및보안", dept: "경영혁신지원", band: "B1(3)", exp: "공급시설 안전관리/검측관리/설계/ 3년 이상", certs: ["가스기사", "가스산업기사", "가스기능사", "가스기술사", "가스기능장", "고압가스기능사", "안전점검원양성교육이수", "안전점검원교육이수"], majors: ["화공", "기계", "토목", "건축설비", "냉동공조", "산업안전"], keywords: ["도시가스 사업법", "안전관리규정", "KGS Code", "건축법"], relatedJobs: ["산업안전보건환경", "자산운영"] },
+    { id: "MS-044", title: "복리후생", dept: "경영혁신지원", band: "B1(2)", exp: "구매, 자산운영 직무 1년 이상", certs: [], majors: ["전공무관", "디자인", "공연기획"], keywords: ["산업안전보건법", "식품위생법", "기업 복리후생 트렌드", "리스크 관리"], relatedJobs: ["인사운영", "조직문화"] }
+  ],
+  "ESG기획본부": [
+    { id: "MS-051", title: "요금솔루션", dept: "고객가치혁신", band: "B2(4)", exp: "고객지원 및 요금 정산 업무 2년 이상", certs: ["정보처리기사", "정보처리산업기사", "전산세무 2급"], majors: ["경영학", "IT", "법학"], keywords: ["도시가스 관련 규정", "가스요금정산"], relatedJobs: ["고객지원", "계량자원관리", "회계관리"] },
+    { id: "MS-052", title: "고객지원", dept: "고객가치혁신", band: "B2(4)", exp: "요금솔루션 분야 합산 2년 이상", certs: ["CS Leaders(관리사)", "CS Leaders 관리사", "데이터 분석 준전문가", "MOS Master"], majors: ["전공무관", "데이터 관련", "커뮤니케이션"], keywords: ["위탁업무 전반 이해", "CS운영 관리 트렌드", "콜시스템 프로세스", "도시가스사업법"], relatedJobs: ["요금솔루션", "계량자원관리"] },
+    { id: "MS-053", title: "계량자원관리", dept: "고객가치혁신", band: "B2(5)", exp: "요금솔루션 직무 2년 이상", certs: ["가스기사", "가스산업기사", "가스기능사", "자동차운전면허증 2종보통"], majors: ["전공무관", "공학계열"], keywords: ["계량에 관한 법률", "KGS CODE", "가스미터 기술기준", "계량기 기술 동향"], relatedJobs: ["고객지원", "요금솔루션", "채권관리"] },
+    { id: "MS-054", title: "채권관리", dept: "고객가치혁신", band: "B2(5)", exp: "요금솔루션 분야 합산 2년 이상", certs: ["신용관리사"], majors: ["전공무관", "회계", "법무"], keywords: ["민사소송절차", "채권보존방법", "부실채권 관리", "재무제표"], relatedJobs: ["계량자원관리", "권역내 사업개발", "법무"] },
+    { id: "BP-066", title: "ESG경영", dept: "ESG전략팀", band: "B2(5)", exp: "경영기획/사회공헌/대외협력 유관업무 3년 이상", certs: [], majors: ["경영", "정책", "환경", "에너지", "언론정보", "통계"], keywords: ["ESG 이슈/트렌드", "사회공헌(CSR)", "지속가능경영보고서(GRI)"], relatedJobs: ["전략기획", "홍보마케팅", "산업안전보건환경"] },
+    { id: "BP-067", title: "홍보마케팅", dept: "ESG전략팀", band: "B2(5)", exp: "홍보마케팅, SNS 컨텐츠 기획 및 운영 업무 3년 이상", certs: ["GTQ(그래픽기술자격)", "한국영상전문인", "프리젠테이션스킬지도사 1급"], majors: ["경영학", "광고홍보학", "언론정보학", "문화예술"], keywords: ["SNS 및 디지털 마케팅", "컨텐츠 기획", "최신 문화/유행 트렌드"], relatedJobs: ["ESG경영", "조직문화"] }
+  ]
+};
+
+const ALL_JOBS = Object.values(JOB_DATABASE).reduce((acc, curr) => acc.concat(curr), []);
+const BAND_LEVELS = { "B1(2)": 1, "B1(3)": 2, "B2(3)": 3, "B2(4)": 4, "B2(5)": 5, "B3(6)": 6, "B3(7)": 7, "B4(8)": 8, "B5(9)": 9 };
+const LEADER_STYLES = ["성과주도형", "소통협력형", "안정관리형", "전략혁신형"];
+const ALL_UNIQUE_JOB_TITLES = Array.from(new Set(ALL_JOBS.map(j => j.title))).sort();
+const EVAL_METRICS = [
+  { id: 'res', label: '지시 이행 및 책임감' }, { id: 'comm', label: '소통 및 공유' }, { id: 'data', label: '데이터 기반 업무수행' },
+  { id: 'feedback', label: '피드백 수용 및 개선' }, { id: 'collab', label: '협업 및 팀 기여도' }, { id: 'flex', label: '유연성 및 조직 태도' },
+  { id: 'rule', label: '근태 및 제도 준수' }, { id: 'goal', label: '성과 달성 노력' }, { id: 'prob', label: '문제 해결 능력' }, { id: 'dev', label: '직무 전문성 향상 노력' }
+];
+
+export default function App() {
+  const [mainCategory, setMainCategory] = useState('transfer'); 
+  const [toast, setToast] = useState(null); 
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, text: '', action: null });
+  const [selectedIds, setSelectedIds] = useState(new Set()); 
+  const [regTab, setRegTab] = useState('single'); 
+  const [bulkData, setBulkData] = useState('');
+
+  // --- 이동 상태 ---
+  const [activeTab, setActiveTab] = useState('jobSelection'); 
+  const [selectedHQ, setSelectedHQ] = useState("가스솔루션본부");
+  const [selectedJobId, setSelectedJobId] = useState("SP-001");
+  const [candidates, setCandidates] = useState([]);
+  const [analyzedCandidates, setAnalyzedCandidates] = useState([]);
+  const [decisions, setDecisions] = useState({});
+  const [transferJobFilters, setTransferJobFilters] = useState([]);
+  const [formData, setFormData] = useState({
+    name: '', currentDept: '', education: '', major: '', band: 'B1(2)', certs: '', training: '', perf2023: 'B', perf2024: 'B', perf2025: 'B'
+  });
+  const [expList, setExpList] = useState([{ jobTitle: '', duration: '', details: '' }]);
+  const selectedJob = useMemo(() => ALL_JOBS.find(j => j.id === selectedJobId) || ALL_JOBS[0], [selectedJobId]);
+
+  // --- 승급 상태 ---
+  const [promoTab, setPromoTab] = useState('registration'); 
+  const [promoCandidates, setPromoCandidates] = useState([]);
+  const [analyzedPromo, setAnalyzedPromo] = useState([]);
+  const [promoForm, setPromoForm] = useState({
+    name: '', dept: '', band: 'B1(2)', promotionDate: '',
+    perf2021: 'B', perf2022: 'B', perf2023: 'B', perf2024: 'B', perf2025: 'B',
+    jobPerformText: '', awardsText: '', collab: 50, tardyCount: 0, penaltyText: '', 
+    culture: 40, knowledgeText: '', leaderText: '', tfText: '', instructorText: '', mentoringText: '', certText: '', specialistText: '' 
+  });
+
+  // --- 직책자 상태 ---
+  const [leaderTab, setLeaderTab] = useState('registration');
+  const [leaderCandidates, setLeaderCandidates] = useState([]);
+  const [analyzedLeader, setAnalyzedLeader] = useState([]);
+  const [leaderTargetHQ, setLeaderTargetHQ] = useState("가스솔루션본부");
+  const [leaderTargetDept, setLeaderTargetDept] = useState("공급솔루션");
+  const [prefLeaderType, setPrefLeaderType] = useState("성과주도형");
+  const [leaderJobFilters, setLeaderJobFilters] = useState([]);
+  
+  const [leaderForm, setLeaderForm] = useState({
+    name: '', currentDept: '', band: 'B3(6)', promotionDate: '',
+    perf2021: 'B', perf2022: 'B', perf2023: 'B', perf2024: 'B', perf2025: 'B',
+    vacationRate: 100, tardyCount: 0, overtime: 10, penaltyText: '', 
+    evalScores: EVAL_METRICS.reduce((acc, m) => ({ ...acc, [m.id]: 8 }), {}) 
+  });
+  const [leaderExpList, setLeaderExpList] = useState([{ jobTitle: '', duration: '', wasLeader: 'N', leaderPerf: 'N/A' }]);
+
+  useEffect(() => { setAnalyzedCandidates([]); }, [candidates, selectedJobId]);
+  useEffect(() => { setAnalyzedPromo([]); }, [promoCandidates]);
+  useEffect(() => { setAnalyzedLeader([]); }, [leaderCandidates, leaderTargetHQ, leaderTargetDept, prefLeaderType]);
+
+  // --- 유틸 함수 ---
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  
+  const getMajorCategory = (majorStr) => {
+    const m = (majorStr || '').toLowerCase();
+    if (/공학|기계|전기|전자|통신|화학|화공|토목|건축|설비|에너지|안전|환경/.test(m)) return 'ENG';
+    if (/경영|경제|상경|무역|회계|세무|부동산/.test(m)) return 'BUS';
+    if (/문학|어학|행정|법학|심리|언론|홍보|커뮤니케이션|미디어|광고|교육/.test(m)) return 'HUM';
+    if (/컴퓨터|소프트웨어|정보|통계|수학|공간정보|지적/.test(m)) return 'IT';
+    return 'OTHER';
+  };
+
+  const countItems = (str) => (str||'').split(',').filter(s => s.trim().length > 0).length;
+  const hasText = (str) => (str||'').trim().length > 0;
+  const getDeptList = (hq) => [...new Set(JOB_DATABASE[hq]?.map(j => j.dept) || [])];
+
+  const calcTenure = (dateStr) => {
+    if (!dateStr) return 0;
+    const pDate = new Date(dateStr);
+    if (isNaN(pDate.getTime())) return 0;
+    const today = new Date();
+    let years = today.getFullYear() - pDate.getFullYear();
+    if (today.getMonth() < pDate.getMonth() || (today.getMonth() === pDate.getMonth() && today.getDate() < pDate.getDate())) { years--; }
+    return Math.max(0, years);
+  };
+
+  const inferLeadershipStyle = (scores) => {
+    const styles = {
+        "성과주도형": (Number(scores.goal) + Number(scores.dev) + Number(scores.prob)) / 3,
+        "소통협력형": (Number(scores.comm) + Number(scores.collab) + Number(scores.feedback)) / 3,
+        "안정관리형": (Number(scores.res) + Number(scores.rule) + Number(scores.data)) / 3,
+        "전략혁신형": (Number(scores.prob) + Number(scores.flex) + Number(scores.data)) / 3,
+    };
+    return Object.keys(styles).reduce((a, b) => styles[a] > styles[b] ? a : b);
+  };
+
+  // --- 이벤트 핸들러 (입력 상태 관리) ---
+  const handleInput = (e) => {
+    if (mainCategory === 'transfer') setFormData({...formData, [e.target.name]: e.target.value});
+  };
+  
+  const handleAddExp = () => setExpList([...expList, { jobTitle: '', duration: '', details: '' }]);
+  const handleRemoveExp = (index) => setExpList(expList.filter((_, i) => i !== index));
+  const handleExpChange = (index, field, value) => { 
+    const newList = [...expList]; newList[index][field] = value; setExpList(newList); 
+  };
+
+  const handleLeaderAddExp = () => setLeaderExpList([...leaderExpList, {jobTitle:'', duration:'', wasLeader:'N', leaderPerf:'N/A'}]);
+  const handleLeaderRemoveExp = (index) => setLeaderExpList(leaderExpList.filter((_, i) => i !== index));
+  const handleLeaderExpChange = (index, field, value) => { 
+    const newList = [...leaderExpList]; newList[index][field] = value; setLeaderExpList(newList); 
+  };
+
+  // --- AI 평가 로직 1: 사내 이동 ---
+  const calculateSuitability = (cand, job) => {
+    if (!cand || !job) return null;
+    let score = 0; const details = {};
+
+    const candExp = (cand.experience || '').replace(/\s+/g, '').toLowerCase();
+    const candCerts = (cand.certs || '').replace(/\s+/g, '').toLowerCase();
+    const candTrain = (cand.training || '').replace(/\s+/g, '').toLowerCase();
+    const candMajor = (cand.major || '').replace(/\s+/g, '').toLowerCase();
+
+    const coreExpKeywords = job.keywords.map(k => k.replace(/\s+/g, '').toLowerCase());
+    const coreCerts = job.certs.map(c => c.replace(/\s+/g, '').toLowerCase());
+    const cleanCandExp = candExp.replace(/\[|\]|\(|\)/g, ''); 
+    const cleanJobTitle = job.title.replace(/\s+/g, '').toLowerCase();
+
+    const isExactJobMatch = cleanCandExp.includes(cleanJobTitle);
+    const isRelatedJobMatch = job.relatedJobs && job.relatedJobs.some(relatedTitle => cleanCandExp.includes(relatedTitle.replace(/\s+/g, '').toLowerCase()));
+
+    if (candExp.length > 0 && (isExactJobMatch || coreExpKeywords.some(k => cleanCandExp.includes(k)))) { score += 40; details.exp = { score: 40, label: "상(필수직무)" }; } 
+    else if (candExp.length > 0 && isRelatedJobMatch) { score += 28; details.exp = { score: 28, label: "중(매칭직무)" }; } 
+    else { score += 16; details.exp = { score: 16, label: "하(타직무)" }; }
+
+    if (candCerts.length > 0 && coreCerts.some(c => candCerts.includes(c))) { score += 20; details.cert = { score: 20, label: "상(필수/우대)" }; } 
+    else if (candCerts.length > 2 && /기사|산업기사|기능장|기능사|지도사|회계사|노무사|세무사|평가사|면허/.test(candCerts)) { score += 14; details.cert = { score: 14, label: "중(일반자격)" }; } 
+    else { score += 8; details.cert = { score: 8, label: "하(무관/공통)" }; }
+
+    const isGeneralTraining = /공통|일반|HR|기본|기초|소양|리더십|사내|필수|안전보건|입문/.test(candTrain);
+    if (candTrain.length > 2 && (coreExpKeywords.some(k => candTrain.includes(k)) || candTrain.includes(cleanJobTitle))) { score += 15; details.train = { score: 15, label: "상(직무전문교육)" }; } 
+    else if (candTrain.length > 2 && isGeneralTraining) { score += 10.5; details.train = { score: 10.5, label: "중(일반HR교육)" }; } 
+    else { score += 6; details.train = { score: 6, label: "하(이력없음/무관)" }; }
+
+    const perfMap = { 'S': 5, 'A': 4, 'B': 3, 'C': 2, 'D': 1 };
+    const avgPerf = ((perfMap[cand.perf2023]||3) + (perfMap[cand.perf2024]||3) + (perfMap[cand.perf2025]||3)) / 3;
+    if (avgPerf >= 4.0) { score += 10; details.perf = { score: 10, label: "상(S/A)" }; }
+    else if (avgPerf >= 3.0) { score += 7; details.perf = { score: 7, label: "중(B)" }; }
+    else { score += 4; details.perf = { score: 4, label: "하(C이하)" }; }
+
+    const candLevel = BAND_LEVELS[cand.band] || 4;
+    const reqLevel = BAND_LEVELS[job.band] || 4;
+    const bandDiff = Math.abs(candLevel - reqLevel);
+    if (bandDiff === 0) { score += 10; details.band = { score: 10, label: "상(일치)" }; }
+    else if (bandDiff === 1) { score += 7; details.band = { score: 7, label: "중(1단계)" }; }
+    else { score += 4; details.band = { score: 4, label: "하(2단계↑)" }; }
+
+    const isAnyMajor = job.majors.includes("전공무관");
+    const matchedSpecificMajor = job.majors.find(m => m !== "전공무관" && candMajor.includes(m.replace(/\s+/g, '').toLowerCase()));
+    const candCategory = getMajorCategory(candMajor);
+    const jobCategories = job.majors.map(m => getMajorCategory(m));
+
+    if (matchedSpecificMajor) { score += 5; details.major = { score: 5, label: "상(우대전공)" }; } 
+    else if (candMajor.length > 0 && (isAnyMajor || jobCategories.includes(candCategory))) { score += 3.5; details.major = { score: 3.5, label: "중(유사/무관)" }; } 
+    else { score += 2; details.major = { score: 2, label: "하(계열다름)" }; }
+
+    let summary = `최근 3년 평균 성과는 ${avgPerf>=4?'우수하며':'무난하며'}, 직무로드 기준 ${details.exp.score===40?'타겟 직무와 일치하는 핵심 수행 경험을 보유하고 있습니다.':details.exp.score===28?'매칭 직무 수행 경험이 있어 원활한 직무 전환이 가능할 것으로 보입니다.':'유관 직무 경험이 부족하여 배치 시 온보딩이 요구됩니다.'}`;
+
+    return { total: Number(score.toFixed(1)), details, summary };
+  };
+
+  // --- AI 로직 2: 승급 심사 ---
+  const calculatePromotionScore = (cand) => {
+    let score = 0;
+    const isLeader = BAND_LEVELS[cand.band] >= 5; 
+    const maxScore = isLeader ? 800 : 500;
+    const d = {}; 
+
+    const sMap = { 'S': 4.5, 'A': 4.0, 'B': 3.5, 'C': 3.0, 'D': 2.5, 'N/A': null };
+    const perfPointMap = { 'S': 100, 'A': 80, 'B': 60, 'C': 40, 'D': 20, 'N/A': null };
+    
+    const evalData = [
+      { grade: cand.perf2025, gpa: sMap[cand.perf2025], pts: perfPointMap[cand.perf2025], w5: 0.40, w3: 0.50 },
+      { grade: cand.perf2024, gpa: sMap[cand.perf2024], pts: perfPointMap[cand.perf2024], w5: 0.25, w3: 0.30 },
+      { grade: cand.perf2023, gpa: sMap[cand.perf2023], pts: perfPointMap[cand.perf2023], w5: 0.15, w3: 0.20 },
+      { grade: cand.perf2022, gpa: sMap[cand.perf2022], pts: perfPointMap[cand.perf2022], w5: 0.10, w3: 0 },
+      { grade: cand.perf2021, gpa: sMap[cand.perf2021], pts: perfPointMap[cand.perf2021], w5: 0.10, w3: 0 }
+    ];
+
+    const validGpas = evalData.slice(0, 3).map(e => e.gpa).filter(v => v !== null);
+    const avg3 = validGpas.length > 0 ? Number((validGpas.reduce((a,b)=>a+b, 0) / validGpas.length).toFixed(2)) : 0;
+    const perf25 = evalData[0].gpa !== null ? evalData[0].gpa : 0; 
+    const tenure = calcTenure(cand.promotionDate);
+    let isEligible = true;
+    let failReason = "";
+
+    if (cand.band === 'B4(8)' || cand.band === 'B3(7)') {
+        if (tenure < 3) { isEligible = false; failReason = "체류연한 3년 미달"; }
+        else if (perf25 < 4.0) { isEligible = false; failReason = "당해 평가 A 미달"; }
+        else if (avg3 < 4.0) { isEligible = false; failReason = "유효 평가 평균 4.0 미달"; }
+    } else if (cand.band === 'B3(6)') {
+        if (tenure < 3) { isEligible = false; failReason = "체류연한 3년 미달"; }
+        else if (perf25 < 3.5) { isEligible = false; failReason = "당해 평가 B 미달"; }
+        else if (avg3 < 3.5) { isEligible = false; failReason = "유효 평가 평균 3.5 미달"; }
+    } else if (cand.band === 'B2(5)') {
+        if (tenure < 3) { isEligible = false; failReason = "체류연한 3년 미달"; }
+        else if (perf25 < 4.0) { isEligible = false; failReason = "당해 평가 A 미달"; }
+        else if (avg3 < 3.5) { isEligible = false; failReason = "유효 평가 평균 3.5 미달"; }
+    } else if (cand.band === 'B2(4)') {
+        if (tenure < 3) { isEligible = false; failReason = "체류연한 3년 미달"; }
+        else if (perf25 < 3.5) { isEligible = false; failReason = "당해 평가 B 미달"; }
+        else if (avg3 < 3.0) { isEligible = false; failReason = "유효 평가 평균 3.0 미달"; }
+    } else { 
+        if (tenure < 2) { isEligible = false; failReason = "체류연한 2년 미달"; }
+        else if (perf25 < 4.0) { isEligible = false; failReason = "당해 평가 A 미달"; }
+        else if (avg3 < 3.0) { isEligible = false; failReason = "유효 평가 평균 3.0 미달"; }
+    }
+
+    let validWeightSum = 0; let weightedPointsSum = 0;
+    if (isLeader) {
+      evalData.forEach(e => { if (e.pts !== null) { validWeightSum += e.w5; weightedPointsSum += (e.pts * e.w5); } });
+      d.perf = validWeightSum > 0 ? (weightedPointsSum / validWeightSum) * 2.5 : 0;
+    } else {
+      evalData.slice(0, 3).forEach(e => { if (e.pts !== null) { validWeightSum += e.w3; weightedPointsSum += (e.pts * e.w3); } });
+      d.perf = validWeightSum > 0 ? (weightedPointsSum / validWeightSum) * 2 : 0;
+    }
+    d.perf = Math.round(d.perf * 10) / 10;
+    
+    // 우상향 트렌드 감지
+    let isUpwardTrend = false;
+    const validGradesForTrend = evalData.map(e => e.pts).filter(v => v !== null).reverse(); 
+    if (validGradesForTrend.length >= 3) {
+      let upwardCount = 0;
+      for (let i = 0; i < validGradesForTrend.length - 1; i++) {
+        if (validGradesForTrend[i+1] > validGradesForTrend[i]) upwardCount++;
+      }
+      if (upwardCount >= 2) isUpwardTrend = true; 
+    }
+    d.trendBonus = isUpwardTrend ? 10 : 0;
+    score += (d.perf + d.trendBonus);
+
+    d.jobPerformCount = countItems(cand.jobPerformText);
+    d.jobPerform = d.jobPerformCount >= (isLeader ? 2 : 1) ? 100 : 0; 
+    score += d.jobPerform;
+
+    d.awardCount = countItems(cand.awardsText);
+    d.awards = Math.min(d.awardCount * 10, 30); 
+    score += d.awards;
+    
+    const perfArray = evalData.map(e => e.grade).filter(g => g !== 'N/A');
+    let isUnderC = false;
+    for (let i = 0; i < perfArray.length - 1; i++) {
+        if (['C', 'D'].includes(perfArray[i]) && ['C', 'D'].includes(perfArray[i+1])) { isUnderC = true; break; }
+    }
+    d.underC = isUnderC ? -10 : 0; 
+    score += d.underC;
+
+    d.collab = Number(cand.collab) || 0; score += d.collab; 
+    d.attendance = Math.max(50 - ((Number(cand.tardyCount) || 0) * 10), 0); score += d.attendance;
+    d.penalty = hasText(cand.penaltyText) ? 30 : 0; score -= d.penalty; 
+
+    d.culture = Number(cand.culture) || 0; score += d.culture; 
+    d.knowledge = hasText(cand.knowledgeText) ? (isLeader ? 50 : 10) : 0; score += d.knowledge;
+    d.leader = hasText(cand.leaderText) ? (isLeader ? 50 : 15) : 0; score += d.leader;
+    d.tf = hasText(cand.tfText) ? (isLeader ? 40 : 10) : 0; score += d.tf;
+    d.instructor = hasText(cand.instructorText) ? (isLeader ? 30 : 10) : 0; score += d.instructor;
+    d.mentoring = hasText(cand.mentoringText) ? (isLeader ? 30 : 10) : 0; score += d.mentoring;
+    d.cert = hasText(cand.certText) ? (isLeader ? 30 : 10) : 0; score += d.cert;
+    d.specialist = hasText(cand.specialistText) ? (isLeader ? 20 : 10) : 0; score += d.specialist;
+
+    let summary = '';
+    if (!isEligible) { summary = `[기본 조건 불충족] 사유: ${failReason}. 체류연한 ${tenure}년 및 유효 평균 ${avg3}점.`; score = 0; } 
+    else { summary = `[기본 조건 통과] 체류연한 ${tenure}년, 유효 평균 ${avg3}점. 주요성과 ${d.jobPerformCount}건 반영됨.`; }
+
+    return { score: Math.round(score), maxScore, details: d, summary, isLeader, isEligible, failReason, tenure, isUpwardTrend, evals: evalData.map(e => e.grade) };
+  };
+
+  // --- AI 로직 3: 직책자 추천 ---
+  const calculateLeaderScore = (cand) => {
+    let score = 0; const d = {};
+
+    const deptJobs = JOB_DATABASE[leaderTargetHQ]?.filter(j => j.dept === leaderTargetDept).map(j => j.title.replace(/\s+/g, '').toLowerCase()) || [];
+    const cleanExp = (cand.experience || '').replace(/\s+/g, '').toLowerCase();
+    const hasDeptExp = deptJobs.some(j => cleanExp.includes(j));
+    d.exp = hasDeptExp ? 30 : 10;
+    score += d.exp;
+
+    const sMap = { 'S': 5, 'A': 4, 'B': 3, 'C': 2, 'D': 1, 'N/A': null };
+    const evalData = [cand.perf2025, cand.perf2024, cand.perf2023, cand.perf2022, cand.perf2021];
+    const evals = evalData.map(v => sMap[v]).filter(v => v !== null);
+    let evalScore = 0; let isUpward = false;
+    if (evals.length > 0) {
+      const avg = evals.reduce((a,b)=>a+b, 0) / evals.length; 
+      evalScore = (avg / 5) * 20; 
+      
+      const chronological = [...evals].reverse();
+      if (chronological.length >= 3) {
+          let upCnt = 0;
+          for(let i=0; i<chronological.length-1; i++) { if(chronological[i+1] > chronological[i]) upCnt++; }
+          if(upCnt >= 2) isUpward = true;
+      }
+    }
+    d.perf = Math.round(evalScore + (isUpward ? 5 : 0));
+    score += d.perf;
+
+    let compScore = 0;
+    if (Number(cand.vacationRate) >= 80) compScore += 5;
+    if (Number(cand.tardyCount) === 0) compScore += 5;
+    if ((Number(cand.overtime) || 0) <= 40) compScore += 5; 
+    if (hasText(cand.penaltyText)) compScore -= 15; 
+    d.compliance = Math.max(0, compScore);
+    score += d.compliance;
+
+    const attitudeSum = Object.values(cand.evalScores || {}).reduce((a,b)=>a+Number(b), 0);
+    d.attitude = Math.round((attitudeSum / 100) * 15);
+    score += d.attitude;
+
+    const inferredStyle = inferLeadershipStyle(cand.evalScores);
+    d.leaderMatch = (inferredStyle === prefLeaderType) ? 15 : 5;
+    score += d.leaderMatch;
+
+    const total = Math.min(score, 100);
+    const isRecommended = total >= 80;
+    const summary = `[${leaderTargetDept}] 직무 경험 ${hasDeptExp ? '보유(적합)' : '부족'}. 5년 평가 ${isUpward ? '우상향 추세' : '무난'}. AI 리더십 추론 결과 [${inferredStyle}] 성향으로 분석되어, 선호 유형(${prefLeaderType})과 ${inferredStyle === prefLeaderType ? '일치함' : '불일치함'}.`;
+
+    return { total, details: d, summary, isRecommended, inferredStyle, evals: evalData };
+  };
+
+  // --- 이벤트 핸들러 (제출 및 등록) ---
+  const handleSingleSubmitLocal = (e) => {
+    e.preventDefault();
+    if (mainCategory === 'transfer') {
+        const formattedExp = expList.filter(exp => exp.jobTitle || exp.details).map(exp => `${exp.jobTitle ? `[${exp.jobTitle}]` : ''} ${exp.details} ${exp.duration ? `(${exp.duration})` : ''}`.trim()).join('\n');
+        setCandidates(prev => { const idx = prev.findIndex(c => c.name === formData.name); if(idx>=0){const n=[...prev]; n[idx]={...formData, experience: formattedExp, id:prev[idx].id}; return n;} return [{...formData, experience: formattedExp, id: `c${Date.now()}`}, ...prev]; });
+        setFormData({name:'', currentDept:'', education:'', major:'', band:'B1(2)', certs:'', training:'', perf2023:'B', perf2024:'B', perf2025:'B'}); setExpList([{ jobTitle: '', duration: '', details: '' }]);
+    } else if (mainCategory === 'promotion') {
+        setPromoCandidates(prev => { const idx = prev.findIndex(c => c.name === promoForm.name); if(idx>=0){const n=[...prev]; n[idx]={...promoForm, id:prev[idx].id}; return n;} return [{...promoForm, id: `p${Date.now()}`}, ...prev]; });
+    } else {
+        const formattedLexp = leaderExpList.filter(exp => exp.jobTitle).map(exp => `[${exp.jobTitle}] ${exp.duration}년 (팀장:${exp.wasLeader}, 평가:${exp.leaderPerf})`).join('\n');
+        setLeaderCandidates(prev => { const idx = prev.findIndex(c => c.name === leaderForm.name); if(idx>=0){const n=[...prev]; n[idx]={...leaderForm, experience: formattedLexp, id:prev[idx].id}; return n;} return [{...leaderForm, experience: formattedLexp, id: `l${Date.now()}`}, ...prev]; });
+        setLeaderExpList([{ jobTitle: '', duration: '', wasLeader: 'N', leaderPerf: 'N/A' }]);
+    }
+    showToast(`등록 완료`);
+  };
+
+  const handleRunAnalysisLocal = () => {
+    if (mainCategory === 'transfer') {
+        if (candidates.length === 0) return showToast("분석 대상이 없습니다.");
+        let filtered = candidates;
+        if (transferJobFilters.length > 0) {
+            filtered = candidates.filter(c => transferJobFilters.some(f => c.experience && c.experience.includes(f)));
+            if (filtered.length === 0) return showToast(`선택한 경험을 가진 후보자가 없습니다.`);
+        }
+        setAnalyzedCandidates(filtered.map(cand => ({ ...cand, evaluation: calculateSuitability(cand, selectedJob) })).sort((a, b) => b.evaluation.total - a.evaluation.total));
+        showToast(`이동 분석 완료`);
+    }
+    else if (mainCategory === 'promotion') {
+        if (promoCandidates.length === 0) return showToast("분석 대상이 없습니다.");
+        setAnalyzedPromo(promoCandidates.map(cand => ({ ...cand, evaluation: calculatePromotionScore(cand) })).sort((a, b) => b.evaluation.score - a.evaluation.score));
+        showToast(`승급 분석 완료`);
+    } else {
+        if (leaderCandidates.length === 0) return showToast("분석 대상이 없습니다.");
+        let filtered = leaderCandidates;
+        if (leaderJobFilters.length > 0) {
+            filtered = leaderCandidates.filter(c => leaderJobFilters.some(f => c.experience && c.experience.includes(f)));
+            if (filtered.length === 0) return showToast(`선택한 경험을 가진 후보자가 없습니다.`);
+        }
+        setAnalyzedLeader(filtered.map(cand => ({ ...cand, evaluation: calculateLeaderScore(cand) })).sort((a, b) => b.evaluation.total - a.evaluation.total));
+        showToast(`직책자 추천 분석 완료`);
+    }
+  };
+
+  const handleBulkSubmit = () => {
+    if (!bulkData.trim()) return showToast("데이터가 없습니다.");
+    const rows = bulkData.trim().split('\n');
+    const newCands = [];
+    rows.forEach((row, i) => {
+      if (i === 0 && (row.includes('이름') || row.includes('부서'))) return; 
+      const delimiter = row.includes('\t') ? '\t' : ',';
+      const cols = row.split(delimiter).map(c => (c || '').trim());
+      if (cols.length >= 1 && cols[0]) {
+        if (mainCategory === 'transfer') {
+            newCands.push({id: `b${Date.now()}${i}`, name: cols[0], currentDept: cols[1]||'', education: cols[2]||'', major: cols[3]||'', band: cols[4]||'B1(2)', certs: cols[5]||'', training: cols[6]||'', perf2023: cols[7]||'B', perf2024: cols[8]||'B', perf2025: cols[9]||'B', experience: cols[10]||''});
+        }
+        else if (mainCategory === 'promotion') {
+            newCands.push({id: `p${Date.now()}${i}`, name: cols[0], dept: cols[1]||'', band: cols[2]||'B1(2)', promotionDate: cols[3]||'', perf2021: cols[4]||'B', perf2022: cols[5]||'B', perf2023: cols[6]||'B', perf2024: cols[7]||'B', perf2025: cols[8]||'B', jobPerformText: cols[9]||'', awardsText: cols[10]||'', collab: Number(cols[11])||0, tardyCount: Number(cols[12])||0, penaltyText: cols[13]||'', culture: Number(cols[14])||0, knowledgeText: cols[15]||'', leaderText: cols[16]||'', tfText: cols[17]||'', instructorText: cols[18]||'', mentoringText: cols[19]||'', certText: cols[20]||'', specialistText: cols[21]||''});
+        }
+        else {
+            const evalArr = [cols[13], cols[14], cols[15], cols[16], cols[17], cols[18], cols[19], cols[20], cols[21], cols[22]].map(n => n !== undefined && n !== '' ? Number(n) : 8); 
+            const evalScores = EVAL_METRICS.reduce((acc, m, idx) => ({ ...acc, [m.id]: evalArr[idx] }), {});
+            const pastExpStrs = [];
+            for (let j = 0; j < 3; j++) {
+                const bIdx = 23 + (j * 4);
+                if (cols[bIdx] && cols[bIdx].trim() !== '') {
+                    pastExpStrs.push(`[${cols[bIdx].trim()}] ${cols[bIdx + 1]||'1'}년 (팀장:${cols[bIdx + 2]||'N'}, 평가:${cols[bIdx + 3]||'N/A'})`);
+                }
+            }
+            newCands.push({id: `l${Date.now()}${i}`, name: cols[0], currentDept: cols[1]||'', band: cols[2]||'B3(6)', promotionDate: cols[3]||'', perf2021: cols[4]||'B', perf2022: cols[5]||'B', perf2023: cols[6]||'B', perf2024: cols[7]||'B', perf2025: cols[8]||'B', vacationRate: Number(cols[9])||100, tardyCount: Number(cols[10])||0, overtime: Number(cols[11])||10, penaltyText: cols[12]||'', evalScores, experience: pastExpStrs.join('\n') });
+        }
+      }
+    });
+
+    if (mainCategory === 'transfer') { setCandidates(prev => { let u = [...prev]; newCands.forEach(nc => { const idx = u.findIndex(c => c.name === nc.name); if (idx >= 0) u[idx] = { ...nc, id: u[idx].id }; else u.unshift(nc); }); return u; }); } 
+    else if (mainCategory === 'promotion') { setPromoCandidates(prev => { let u = [...prev]; newCands.forEach(nc => { const idx = u.findIndex(c => c.name === nc.name); if (idx >= 0) u[idx] = { ...nc, id: u[idx].id }; else u.unshift(nc); }); return u; }); }
+    else { setLeaderCandidates(prev => { let u = [...prev]; newCands.forEach(nc => { const idx = u.findIndex(c => c.name === nc.name); if (idx >= 0) u[idx] = { ...nc, id: u[idx].id }; else u.unshift(nc); }); return u; }); }
+    showToast(`대량 등록 완료`); setBulkData('');
+  };
+
+  const handleDeleteCandidate = (id) => {
+    if (mainCategory === 'transfer') setCandidates(p => p.filter(c => c.id !== id));
+    else if (mainCategory === 'promotion') setPromoCandidates(p => p.filter(c => c.id !== id));
+    else setLeaderCandidates(p => p.filter(c => c.id !== id));
+    setSelectedIds(p => { const n = new Set(p); n.delete(id); return n; });
+  };
+  const toggleSelection = (id) => setSelectedIds(p => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectAll = () => {
+    const list = mainCategory === 'transfer' ? candidates : mainCategory === 'promotion' ? promoCandidates : leaderCandidates;
+    if (selectedIds.size === list.length) setSelectedIds(new Set()); else setSelectedIds(new Set(list.map(c => c.id))); 
+  };
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    setConfirmModal({ isOpen: true, text: `선택한 ${selectedIds.size}명의 후보자를 삭제하시겠습니까?`, action: () => {
+        if (mainCategory === 'transfer') setCandidates(p => p.filter(c => !selectedIds.has(c.id)));
+        else if (mainCategory === 'promotion') setPromoCandidates(p => p.filter(c => !selectedIds.has(c.id)));
+        else setLeaderCandidates(p => p.filter(c => !selectedIds.has(c.id)));
+        setSelectedIds(new Set()); setConfirmModal({ isOpen: false, text: '', action: null });
+    }});
+  };
+  const handleDeleteAllCandidates = () => {
+    const list = mainCategory === 'transfer' ? candidates : mainCategory === 'promotion' ? promoCandidates : leaderCandidates;
+    if (list.length === 0) return;
+    setConfirmModal({ isOpen: true, text: "등록된 모든 풀을 비우시겠습니까?", action: () => { 
+        if (mainCategory === 'transfer') setCandidates([]); else if (mainCategory === 'promotion') setPromoCandidates([]); else setLeaderCandidates([]);
+        setSelectedIds(new Set()); setConfirmModal({ isOpen: false, text: '', action: null }); 
+    }});
+  };
+  const handleResetAll = () => {
+    setConfirmModal({ isOpen: true, text: "모든 시스템 데이터를 삭제하시겠습니까?", action: () => {
+        setCandidates([]); setDecisions({}); setSelectedIds(new Set()); setPromoCandidates([]); setAnalyzedPromo([]); setLeaderCandidates([]); setAnalyzedLeader([]);
+        showToast("초기화 완료"); setConfirmModal({ isOpen: false, text: '', action: null });
+    }});
+  };
+
+  // --- UI Components ---
+  const renderSparkline = (evalsArray) => (
+    <div className="flex items-end gap-1.5 h-6">
+      {evalsArray.map((g, i) => {
+        if(g === 'N/A') return (
+          <div key={i} className="flex flex-col items-center gap-0.5">
+            <div className="w-2.5 h-1 bg-slate-200 rounded-sm" title="N/A" />
+            <span className="text-[8px] font-bold text-slate-400">-</span>
+          </div>
+        );
+        const h = g==='S'?24 : g==='A'?20 : g==='B'?16 : g==='C'?12 : 8;
+        const color = g==='S'?'bg-blue-500': g==='A'?'bg-emerald-500': g==='B'?'bg-amber-400': g==='C'?'bg-orange-400': 'bg-rose-500';
+        return (
+          <div key={i} className="flex flex-col items-center gap-0.5 cursor-help" title={g}>
+            <div style={{height: `${h}px`}} className={`w-2.5 ${color} rounded-t-sm opacity-80 hover:opacity-100 transition-opacity`} />
+            <span className="text-[9px] font-black text-slate-500 leading-none">{g}</span>
+          </div>
+        )
+      })}
+    </div>
+  );
+
+  const renderJobSelection = () => (
+    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4 transition-all">
+      <div className="bg-gradient-to-r from-sky-50 to-white border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="bg-sky-100 p-1.5 rounded-lg text-sky-600"><Briefcase className="w-4 h-4" /></div>
+          <h2 className="text-lg font-bold text-slate-800 tracking-tight">타겟 직무 셋업</h2>
+        </div>
+        <span className="text-xs font-semibold text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">직무로드 기반 매핑</span>
+      </div>
+      <div className="p-4">
+        <div className="flex flex-wrap gap-2 mb-3 border-b border-slate-100 pb-3">
+          {Object.keys(JOB_DATABASE).map(hq => (
+            <button key={hq} onClick={() => setSelectedHQ(hq)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 ${selectedHQ === hq ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>{hq}</button>
+          ))}
+        </div>
+        <div className="max-h-[140px] overflow-y-auto custom-scroll pr-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            {JOB_DATABASE[selectedHQ].map(job => (
+              <button key={job.id} onClick={() => setSelectedJobId(job.id)} className={`p-2.5 rounded-xl text-left transition-all duration-200 border-2 ${selectedJobId === job.id ? 'bg-sky-50/80 border-sky-500 shadow-sm' : 'bg-white border-slate-100 hover:border-sky-200 hover:bg-slate-50'}`}>
+                <span className={`text-[10px] font-bold tracking-wide uppercase block mb-1 ${selectedJobId === job.id ? 'text-sky-500' : 'text-slate-400'}`}>{job.dept}</span>
+                <span className={`text-xs font-bold block truncate ${selectedJobId === job.id ? 'text-sky-900' : 'text-slate-700'}`}>{job.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderJobCriteria = () => (
+    <div className="bg-gradient-to-br from-sky-500 via-sky-600 to-sky-700 rounded-2xl p-4 mb-6 shadow-md text-white relative overflow-hidden">
+      <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-3xl"></div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-3 relative z-10">
+        <h3 className="text-xl font-black flex items-center gap-2"><Target className="w-5 h-5 text-sky-200" />{selectedJob.title} <span className="text-sky-200 font-medium text-base ml-1">인재 요구 조건</span></h3>
+        <div className="flex items-center gap-2 mt-2 md:mt-0">
+           <span className="bg-sky-900/50 text-sky-100 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-white/20">코드: {selectedJob.id}</span>
+           <span className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-white/30">타겟 밴드: {selectedJob.band}</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 relative z-10">
+        <div className="bg-white/10 p-3 rounded-xl border border-white/20">
+          <p className="text-[11px] text-sky-200 font-bold mb-1 uppercase">핵심 요구 경력</p>
+          <p className="text-xs font-bold leading-relaxed line-clamp-2" title={selectedJob.exp}>{selectedJob.exp}</p>
+        </div>
+        <div className="bg-white/10 p-3 rounded-xl border border-white/20">
+          <p className="text-[11px] text-sky-200 font-bold mb-1 uppercase">우대 자격증 (세부)</p>
+          <p className="text-[11px] font-bold leading-relaxed line-clamp-2" title={selectedJob.certs.join(', ')}>{selectedJob.certs.join(', ')}</p>
+        </div>
+        <div className="bg-white/10 p-3 rounded-xl border border-white/20">
+          <p className="text-[11px] text-sky-200 font-bold mb-1 uppercase">직무로드 매칭 직무군</p>
+          <p className="text-xs font-bold leading-relaxed truncate" title={selectedJob.relatedJobs ? selectedJob.relatedJobs.join(', ') : '없음'}>{selectedJob.relatedJobs ? selectedJob.relatedJobs.join(', ') : '없음'}</p>
+        </div>
+        <div className="bg-white/10 p-3 rounded-xl border border-white/20">
+          <p className="text-[11px] text-sky-200 font-bold mb-1 uppercase">직무 핵심 지식 (키워드)</p>
+          <div className="flex flex-wrap gap-1 h-[34px] overflow-hidden">
+            {selectedJob.keywords.map(k => (<span key={k} className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-md truncate max-w-full">#{k}</span>))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCandidateRegBox = (type) => {
+    const isT = type === 'transfer';
+    const isP = type === 'promotion';
+    const isL = type === 'leadership';
+    
+    return (
+      <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-sky-50 to-white border-b border-slate-200 px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3"><div className="bg-sky-100 p-2 rounded-xl text-sky-600"><UserPlus className="w-5 h-5" /></div><h2 className="text-xl font-bold text-slate-800 tracking-tight">후보자 풀(Pool) 등록</h2></div>
+          <div className="flex bg-slate-100/80 p-1.5 shadow-inner border border-slate-200 rounded-xl">
+            <button onClick={()=>setRegTab('single')} className={`px-5 py-2 text-sm font-bold rounded-lg transition-all ${regTab==='single' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500'}`}>개별 입력</button>
+            <button onClick={()=>setRegTab('bulk')} className={`px-5 py-2 text-sm font-bold rounded-lg transition-all ${regTab==='bulk' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500'}`}>엑셀 일괄 등록</button>
+          </div>
+        </div>
+        
+        <div className="p-6 border-b border-slate-100">
+          {regTab === 'single' ? (
+            <form onSubmit={handleSingleSubmitLocal} className="space-y-6">
+               <div className="grid grid-cols-1 md:grid-cols-4 gap-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div><label className="block text-xs font-bold text-slate-600 mb-1.5">이름 *</label><input required name="name" value={isL?leaderForm.name:isP?promoForm.name:formData.name} onChange={e=>isL?setLeaderForm({...leaderForm, name:e.target.value}):isP?setPromoForm({...promoForm, name:e.target.value}):setFormData({...formData, name:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm focus:border-sky-500 outline-none" /></div>
+                  <div><label className="block text-xs font-bold text-slate-600 mb-1.5">부서</label><input name="currentDept" value={isL?leaderForm.currentDept:isP?promoForm.dept:formData.currentDept} onChange={e=>isL?setLeaderForm({...leaderForm, currentDept:e.target.value}):isP?setPromoForm({...promoForm, dept:e.target.value}):setFormData({...formData, currentDept:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm focus:border-sky-500 outline-none" /></div>
+                  <div><label className="block text-xs font-bold text-slate-600 mb-1.5">직급(Band)</label><select name="band" value={isL?leaderForm.band:isP?promoForm.band:formData.band} onChange={e=>isL?setLeaderForm({...leaderForm, band:e.target.value}):isP?setPromoForm({...promoForm, band:e.target.value}):setFormData({...formData, band:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm focus:border-sky-500 outline-none cursor-pointer">{Object.keys(BAND_LEVELS).map(b => <option key={b} value={b}>{b}</option>)}</select></div>
+                  {!isP && !isL && <div><label className="block text-xs font-bold text-slate-600 mb-1.5">전공</label><input name="major" value={formData.major} onChange={e=>setFormData({...formData, major:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm focus:border-sky-500 outline-none" /></div>}
+                  {(isP || isL) && <div><label className="block text-xs font-bold text-slate-600 mb-1.5">현 직급 발령일 *</label><input required type="date" name="promotionDate" value={isL?leaderForm.promotionDate:promoForm.promotionDate} onChange={e=>isL?setLeaderForm({...leaderForm, promotionDate:e.target.value}):setPromoForm({...promoForm, promotionDate:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm focus:border-sky-500 outline-none" /></div>}
+               </div>
+
+               {isL && (
+                 <div className="space-y-6">
+                   <div>
+                    <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><Target className="w-4 h-4 text-sky-500"/> 과거 주요 직무 및 팀장 경험</h3>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                        {leaderExpList.map((exp, idx) => (
+                          <div key={idx} className="flex flex-col sm:flex-row gap-2 items-center bg-white p-2 rounded-lg border shadow-sm relative">
+                            <input type="text" placeholder="수행 직무 (예: 안전기획)" value={exp.jobTitle} onChange={e => handleLeaderExpChange(idx, 'jobTitle', e.target.value)} className="w-full sm:w-1/3 bg-slate-50 rounded-md p-2 text-xs font-bold outline-none" />
+                            <div className="flex items-center gap-1 w-full sm:w-1/5">
+                              <input type="number" min="0" placeholder="기간" value={exp.duration} onChange={e => handleLeaderExpChange(idx, 'duration', e.target.value)} className="w-full bg-slate-50 rounded-md p-2 text-xs outline-none text-center" />
+                              <span className="text-xs font-bold text-slate-500">년</span>
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-1/4">
+                              <span className="text-[10px] font-bold text-slate-600">당시 팀장여부</span>
+                              <select value={exp.wasLeader} onChange={e => handleLeaderExpChange(idx, 'wasLeader', e.target.value)} className="bg-slate-50 rounded p-1.5 text-xs font-bold outline-none"><option value="N">N</option><option value="Y">Y</option></select>
+                            </div>
+                            {exp.wasLeader === 'Y' && (
+                              <div className="flex items-center gap-2 w-full sm:w-1/4">
+                                <span className="text-[10px] font-bold text-slate-600">당시 평가</span>
+                                <select value={exp.leaderPerf} onChange={e => handleLeaderExpChange(idx, 'leaderPerf', e.target.value)} className="bg-slate-50 rounded p-1.5 text-xs font-bold outline-none text-sky-600"><option value="S">S</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="N/A">N/A</option></select>
+                              </div>
+                            )}
+                            {leaderExpList.length > 1 && <button type="button" onClick={() => handleLeaderRemoveExp(idx)} className="w-6 h-6 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center hover:bg-rose-500 hover:text-white"><Trash2 className="w-3 h-3" /></button>}
+                          </div>
+                        ))}
+                        <button type="button" onClick={handleLeaderAddExp} className="w-full py-2 bg-white border border-dashed border-sky-300 text-sky-600 text-xs font-bold rounded-lg hover:bg-sky-50">+ 경험 추가</button>
+                      </div>
+                   </div>
+
+                   <div>
+                    <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-sky-500"/> 최근 5년 평가 및 제도준수</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                        {['2021', '2022', '2023', '2024', '2025'].map(yr => (
+                          <div key={yr}>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">{yr}년 평가</label>
+                            <select value={leaderForm[`perf${yr}`]} onChange={e=>setLeaderForm({...leaderForm, [`perf${yr}`]:e.target.value})} className="w-full bg-white border border-slate-200 rounded-md p-1.5 text-sm font-bold focus:border-sky-500 outline-none cursor-pointer">
+                              <option value="S">S</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="N/A">N/A</option>
+                            </select>
+                          </div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="flex flex-col bg-slate-50 p-2.5 rounded-lg border border-slate-200"><span className="text-[10px] font-bold text-slate-600 mb-1">휴가 사용률(%)</span><input type="number" value={leaderForm.vacationRate} onChange={e=>setLeaderForm({...leaderForm, vacationRate:e.target.value})} className="w-full border rounded p-1.5 text-center text-xs font-bold outline-none focus:border-sky-500" /></div>
+                      <div className="flex flex-col bg-slate-50 p-2.5 rounded-lg border border-slate-200"><span className="text-[10px] font-bold text-slate-600 mb-1">지각/조퇴(회)</span><input type="number" value={leaderForm.tardyCount} onChange={e=>setLeaderForm({...leaderForm, tardyCount:e.target.value})} className="w-full border rounded p-1.5 text-center text-xs font-bold outline-none focus:border-sky-500" /></div>
+                      <div className="flex flex-col bg-slate-50 p-2.5 rounded-lg border border-slate-200"><span className="text-[10px] font-bold text-slate-600 mb-1">시간외근무(월평균h)</span><input type="number" value={leaderForm.overtime} onChange={e=>setLeaderForm({...leaderForm, overtime:e.target.value})} className="w-full border rounded p-1.5 text-center text-xs font-bold outline-none focus:border-sky-500" /></div>
+                      <div className="flex flex-col bg-rose-50 p-2.5 rounded-lg border border-rose-200"><span className="text-[10px] font-bold text-rose-600 mb-1">징계내역</span><input value={leaderForm.penaltyText} onChange={e=>setLeaderForm({...leaderForm, penaltyText:e.target.value})} className="w-full border border-rose-300 rounded p-1.5 text-xs outline-none text-rose-600" placeholder="없음"/></div>
+                    </div>
+                   </div>
+
+                   <div>
+                    <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5"><BarChart3 className="w-4 h-4 text-sky-500"/> 수시 평가 기반 리더십 추론 (0~10점)</h3>
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">0:매우부족 ~ 10:매우우수</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        {EVAL_METRICS.map(m => (
+                            <div key={m.id} className="bg-slate-50 p-2 rounded-lg border border-slate-200 flex flex-col justify-between">
+                                <label className="text-[10px] font-bold text-slate-700 leading-tight mb-2 break-keep">{m.label}</label>
+                                <select value={leaderForm.evalScores[m.id]} onChange={e=>setLeaderForm({...leaderForm, evalScores: {...leaderForm.evalScores, [m.id]: e.target.value}})} className="w-full bg-white border border-slate-300 rounded p-1 text-xs font-bold outline-none cursor-pointer focus:border-sky-500">
+                                    {[10,9,8,7,6,5,4,3,2,1,0].map(v => <option key={v} value={v}>{v}점</option>)}
+                                </select>
+                            </div>
+                        ))}
+                    </div>
+                   </div>
+                 </div>
+               )}
+
+               {isP && (
+                 <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><Target className="w-4 h-4 text-sky-500"/> 정량 평가 및 성과</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                          {['2021', '2022', '2023', '2024', '2025'].map(yr => (
+                            <div key={yr}>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">{yr}년 평가</label>
+                              <select value={promoForm[`perf${yr}`]} onChange={e=>setPromoForm({...promoForm, [`perf${yr}`]:e.target.value})} className="w-full bg-white border border-slate-200 rounded-md p-1.5 text-sm font-bold focus:border-sky-500 outline-none cursor-pointer">
+                                <option value="S">S</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                                <option value="N/A">없음 (N/A)</option>
+                              </select>
+                            </div>
+                          ))}
+                      </div>
+                      <p className="text-[10px] text-rose-500 mb-3 font-semibold">* '없음' 선택 시 평균 계산에서 제외. 어떠한 조합이든 연속 C 이하면 자동으로 -10점이 감점됩니다.</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                            <label className="block text-xs font-bold text-slate-700 mb-1">주요직무 성과내용 (콤마 구분)</label>
+                            <input value={promoForm.jobPerformText} onChange={e=>setPromoForm({...promoForm, jobPerformText:e.target.value})} placeholder="예: 시스템 구축, 원가 절감" className="w-full border border-slate-300 rounded p-1.5 text-xs focus:border-sky-500 outline-none" />
+                          </div>
+                          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                            <label className="block text-xs font-bold text-slate-700 mb-1">포상 이력 (포상명 콤마 구분)</label>
+                            <input value={promoForm.awardsText} onChange={e=>setPromoForm({...promoForm, awardsText:e.target.value})} placeholder="예: 사내혁신상, 외부표창" className="w-full border border-slate-300 rounded p-1.5 text-xs focus:border-sky-500 outline-none" />
+                          </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-sky-500"/> 태도 / 근태 / 징계</h3>
+                        <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-600">동료/상사 평가 점수 (50점 만점)</span>
+                            <input type="number" min="0" max="50" value={promoForm.collab} onChange={e=>setPromoForm({...promoForm, collab:e.target.value})} className="w-16 border border-slate-300 rounded p-1.5 text-center font-bold outline-none focus:border-sky-500" />
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-600">지각 / 조퇴 횟수 (1회당 10점 감점)</span>
+                            <div className="flex items-center gap-1">
+                              <input type="number" min="0" value={promoForm.tardyCount} onChange={e=>setPromoForm({...promoForm, tardyCount:e.target.value})} className="w-16 border border-slate-300 rounded p-1.5 text-center font-bold outline-none focus:border-sky-500" />
+                              <span className="text-slate-500 font-bold">회</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200">
+                            <span className="font-bold text-rose-600">징계 내역 (내용 입력 시 -30점)</span>
+                            <input value={promoForm.penaltyText} onChange={e=>setPromoForm({...promoForm, penaltyText:e.target.value})} placeholder="예: 규정 위반 등" className="w-32 border border-rose-300 text-rose-600 rounded p-1.5 text-xs outline-none" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-sky-500"/> 조직기여 / 역할 (활동 내역 입력)</h3>
+                        <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 max-h-[220px] overflow-y-auto custom-scroll">
+                          <div className="flex items-center justify-between text-xs mb-1 pb-2 border-b border-slate-200">
+                            <span className="font-bold text-slate-600">조직문화 기여 (행사 참여 등, 최대 40점)</span>
+                            <input type="number" min="0" max="40" value={promoForm.culture} onChange={e=>setPromoForm({...promoForm, culture:e.target.value})} className="w-16 border border-slate-300 rounded p-1.5 text-center font-bold outline-none focus:border-sky-500" />
+                          </div>
+                          {Object.entries({ 
+                            knowledgeText: '지식 자산화 (제도개선 내역)', 
+                            leaderText: '리더 경험 (TF/팀 리더 내역)', 
+                            tfText: '조직과제 참여 (과제명)', 
+                            instructorText: '사내강사 활동 (강의명)', 
+                            mentoringText: '멘토링 / 코칭 (대상)', 
+                            certText: '전문 자격증 (자격명)', 
+                            specialistText: '스페셜리스트 검증 내역' 
+                          }).map(([key, label]) => (
+                            <div key={key}>
+                              <label className="block text-[11px] font-bold text-slate-600 mb-1">{label}</label>
+                              <input value={promoForm[key]} onChange={e=>setPromoForm({...promoForm, [key]:e.target.value})} placeholder="활동 내역 (자동 점수 부여)" className="w-full border border-slate-300 rounded p-1.5 text-xs outline-none focus:border-sky-500" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                 </div>
+               )}
+
+               {isT && (
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+                    <div className="lg:col-span-1 bg-slate-50/80 p-5 rounded-xl border border-slate-200">
+                      <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-sky-500"/> 최근 3개년 성과</label>
+                      <div className="flex flex-col gap-3">
+                        {['2023', '2024', '2025'].map((yr) => (
+                          <div key={yr} className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-slate-600">{yr}년</span>
+                            <select name={`perf${yr}`} value={formData[`perf${yr}`]} onChange={handleInput} className="w-2/3 bg-white border-slate-200 border shadow-sm rounded-lg p-2 text-sm font-bold focus:ring-2 focus:border-sky-500 outline-none">
+                              <option value="S">S등급</option><option value="A">A등급</option><option value="B">B등급</option><option value="C">C등급 이하</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="lg:col-span-3">
+                      <label className="block text-sm font-bold text-slate-600 mb-2">주요 경력 (직무로드 매핑용)</label>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                        {expList.map((exp, idx) => (
+                          <div key={idx} className="flex flex-col sm:flex-row gap-2 items-center bg-white p-2 rounded-lg border shadow-sm relative">
+                            <select value={exp.jobTitle} onChange={e => handleExpChange(idx, 'jobTitle', e.target.value)} className="w-full sm:w-1/3 bg-slate-50 rounded-md p-2 text-xs font-bold outline-none focus:border-sky-500">
+                              <option value="">수행 직무 선택</option>{Object.entries(JOB_DATABASE).map(([hq, jobs]) => (<optgroup key={hq} label={hq}>{jobs.map(job => <option key={job.id} value={job.title}>{job.title}</option>)}</optgroup>))}
+                            </select>
+                            <input type="text" placeholder="기간 (예: 3년)" value={exp.duration} onChange={e => handleExpChange(idx, 'duration', e.target.value)} className="w-full sm:w-1/4 bg-slate-50 rounded-md p-2 text-xs outline-none focus:border-sky-500" />
+                            <input type="text" placeholder="상세 업무 요약" value={exp.details} onChange={e => handleExpChange(idx, 'details', e.target.value)} className="w-full sm:flex-1 bg-slate-50 rounded-md p-2 text-xs outline-none focus:border-sky-500" />
+                            {expList.length > 1 && <button type="button" onClick={() => handleRemoveExp(idx)} className="w-6 h-6 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center hover:bg-rose-500 hover:text-white"><Trash2 className="w-3 h-3" /></button>}
+                          </div>
+                        ))}
+                        <button type="button" onClick={handleAddExp} className="w-full py-2 bg-white border border-dashed border-sky-300 text-sky-600 text-xs font-bold rounded-lg hover:bg-sky-50">+ 추가 수행 경력 입력</button>
+                      </div>
+                    </div>
+                  </div>
+               )}
+              <div className="flex justify-end pt-3"><button type="submit" className="bg-sky-600 text-white px-10 py-3.5 rounded-xl text-sm font-bold shadow-md hover:bg-sky-700 transition-all">등록하기</button></div>
+            </form>
+          ) : (
+            <div className="space-y-5">
+               <div className="bg-sky-50 border border-sky-200 p-5 rounded-xl flex items-start gap-4">
+                <div className="bg-sky-100 p-2 rounded-full"><AlertCircle className="w-5 h-5 text-sky-600" /></div>
+                <div>
+                  <p className="text-sm font-bold text-sky-900 mb-1.5">엑셀 일괄 업로드 가이드</p>
+                  <p className="text-xs text-sky-700 font-medium break-keep">
+                    {isL ? '이름, 부서, 직급(Band), 발령일, 21~25평가, 휴가(%), 지각/조퇴(회), 초과근무(h), 징계내역, 수시평가(각0~10점 10개열), 과거경험1(직무명, 수행기간, 팀장여부, 당시평가), 과거경험2(...), 과거경험3(...) (각 속성을 개별 열로 입력, 최대 3개)' 
+                     : isP ? '이름, 부서, 직급(Band), 현직급발령일(YYYY-MM-DD), 21~25평가, 주요성과, 포상, 동료평가, 지각/조퇴(회), 징계내역, 행사참여점수, 지식자산화, 리더경험, TF참여, 사내강사, 멘토링, 전문자격증, 스페셜리스트' 
+                     : '이름, 현재부서, 학력, 전공, 밴드, 자격증, 교육이수, 23~25성과, 주요경력'}
+                  </p>
+                </div>
+              </div>
+              <textarea value={bulkData} onChange={e => setBulkData(e.target.value)} rows="6" className="w-full bg-slate-50 p-5 text-sm font-mono border rounded-xl outline-none focus:border-sky-500 custom-scroll" placeholder={isL ? "김리더\t공급솔루션\tB3(6)\t2020-01-01\tA\tS\tS\tS\tS\t100\t0\t20\t\t9\t8\t9\t10\t8\t9\t10\t9\t8\t9\t안전기획\t3\tY\tS\t상황관리\t2\tN\tN/A" : isP ? "김승급\t기술혁신팀\tB1(2)\t2021-03-01\tN/A\tA\tS\tS\tS\t시스템구축, 매출증대\t사내혁신상\t45\t0\t\t35\t가이드작성\tTF리더\t\t\t\tSQLD\t" : "김데이터\t데이터분석팀\t석사\t통계학\tB3(6)\tADsP\tAI교육\tA\tS\tA\t[AI기획/분석] 데이터분석 5년"} />
+              <div className="flex justify-end"><button onClick={handleBulkSubmit} className="bg-slate-800 text-white flex items-center gap-2 px-10 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-900"><Upload className="w-5 h-5" /> 업로드</button></div>
+            </div>
+          )}
+        </div>
+        <div className="p-6 bg-slate-50/80 border-t border-slate-100">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Users className="w-4 h-4 text-sky-600"/> 등록된 인원 ({isL?leaderCandidates.length:isP?promoCandidates.length:candidates.length}명)</h3>
+            <div className="flex gap-2">
+              <button onClick={toggleSelectAll} className="text-xs font-bold text-slate-600 bg-white border border-slate-300 px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-50">전체 선택</button>
+              <button onClick={handleDeleteSelected} className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg shadow-sm hover:bg-rose-100">선택 삭제</button>
+              <button onClick={handleDeleteAllCandidates} className="text-xs font-bold text-white bg-rose-500 px-3 py-1.5 rounded-lg shadow-sm hover:bg-rose-600">전체 비우기</button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+              {(isL?leaderCandidates:isP?promoCandidates:candidates).map(cand => {
+                const isSelected = selectedIds.has(cand.id);
+                return (
+                  <div key={cand.id} onClick={() => toggleSelection(cand.id)} className={`group pl-3 pr-2 py-1.5 rounded-full flex items-center gap-2.5 shadow-sm cursor-pointer border-2 ${isSelected ? 'bg-sky-50 border-sky-400' : 'bg-white border-slate-200 hover:border-sky-300'}`}>
+                    <div className={`w-4 h-4 rounded-sm border flex items-center justify-center ${isSelected ? 'bg-sky-500 border-sky-500' : 'border-slate-300 bg-white group-hover:border-sky-300'}`}>{isSelected && <Check className="w-3 h-3 text-white" strokeWidth={4} />}</div>
+                    <span className="text-sm font-extrabold text-slate-800">{cand.name}</span><span className="text-xs font-semibold text-slate-500">| {cand.currentDept || cand.dept}</span>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteCandidate(cand.id); }} className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 ml-1 flex items-center justify-center"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRanking = () => (
+    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-gradient-to-r from-sky-50 to-white border-b border-slate-200 px-6 py-5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-sky-100 p-2 rounded-xl text-sky-600"><Award className="w-5 h-5" /></div>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">AI 적합도 분석 및 인사 리포트</h2>
+        </div>
+      </div>
+
+      <div className="p-6">
+        {analyzedCandidates.length === 0 ? (
+           <div className="text-center py-20 bg-slate-50/80 rounded-2xl border-2 border-slate-200 border-dashed">
+             <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm border border-slate-200">
+               <Search className="w-7 h-7 text-sky-500" />
+             </div>
+             <h3 className="text-xl font-black text-slate-800 mb-2">적합도 분석 준비 완료</h3>
+             <p className="text-slate-500 text-sm font-medium mb-4">총 <strong className="text-sky-600">{candidates.length}명</strong>의 후보자를 타겟 직무[{selectedJob.title}]에 맞추어 평가합니다.</p>
+             <div className="flex flex-col items-center gap-3 mt-6">
+               <div className="flex flex-wrap gap-2 justify-center max-w-lg min-h-[32px]">
+                 {transferJobFilters.map(f => (
+                   <span key={f} className="bg-sky-100 text-sky-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                     {f} <button onClick={() => setTransferJobFilters(prev => prev.filter(item => item !== f))} className="hover:text-sky-900"><XCircle className="w-3.5 h-3.5" /></button>
+                   </span>
+                 ))}
+               </div>
+               <select value="" onChange={e=>{ if(e.target.value && !transferJobFilters.includes(e.target.value)) setTransferJobFilters(p=>[...p, e.target.value]); }} className="bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-slate-700 outline-none shadow-sm cursor-pointer hover:border-sky-300">
+                 <option value="">+ 필수 경험 직무 추가 (다중 선택 가능)</option>
+                 {ALL_UNIQUE_JOB_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+               </select>
+               <button onClick={handleRunAnalysisLocal} className="bg-sky-600 text-white px-10 py-4 rounded-full text-base font-bold shadow-lg hover:bg-sky-700 transition-all flex items-center gap-2.5 mt-2">
+                 <PlayCircle className="w-6 h-6" /> AI 분석 실시
+               </button>
+             </div>
+           </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-sky-50/80 border border-sky-200 px-5 py-3.5 rounded-xl mb-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-bold text-sky-900 flex items-center gap-2"><CheckCircle className="w-5 h-5 text-sky-600"/> 총 {analyzedCandidates.length}명의 분석이 완료되었습니다.</span>
+                  {transferJobFilters.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                          {transferJobFilters.map(f => (
+                          <span key={f} className="bg-white border border-sky-200 text-sky-600 px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                              {f} <button onClick={() => setTransferJobFilters(prev => prev.filter(item => item !== f))} className="hover:text-sky-900"><XCircle className="w-3 h-3" /></button>
+                          </span>
+                          ))}
+                      </div>
+                  )}
+              </div>
+              <div className="flex items-center gap-2">
+                <select value="" onChange={e=>{ if(e.target.value && !transferJobFilters.includes(e.target.value)) setTransferJobFilters(p=>[...p, e.target.value]); }} className="bg-white border border-sky-200 rounded-lg px-3 py-1.5 text-xs font-bold text-sky-800 outline-none cursor-pointer">
+                  <option value="">+ 필터 추가</option>
+                  {ALL_UNIQUE_JOB_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <button onClick={handleRunAnalysisLocal} className="text-xs font-bold text-sky-700 bg-white border border-sky-300 px-4 py-2 rounded-lg hover:bg-sky-50 shadow-sm">↻ 갱신 및 재분석</button>
+              </div>
+            </div>
+
+            {analyzedCandidates.map((cand, idx) => {
+              const { total, details, summary } = cand.evaluation;
+              const dec = decisions[cand.id] || {};
+              const isTop = idx === 0;
+
+              return (
+                <div key={cand.id} className={`relative flex flex-col lg:flex-row items-center border-2 rounded-xl p-4 gap-4 transition-all duration-300 ${isTop ? 'bg-gradient-to-r from-sky-50/80 to-white border-sky-300 shadow-md scale-[1.01]' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                  <div className="flex-shrink-0 w-10 flex items-center justify-center">
+                    {isTop ? <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-lg flex items-center justify-center font-black text-base shadow-md ring-2 ring-sky-200 transform rotate-3">1</div> : <div className="w-8 h-8 bg-slate-100 text-slate-500 rounded-lg flex items-center justify-center font-bold text-sm border border-slate-200">{idx + 1}</div>}
+                  </div>
+
+                  <div className="w-full lg:w-56 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-slate-200 pb-3 lg:pb-0 lg:pr-5">
+                    <div className="flex justify-between items-center mb-1">
+                      <h3 className="text-lg font-black text-slate-800">{cand.name}</h3>
+                      <span className={`text-2xl font-black tracking-tighter leading-none ${total >= 80 ? 'text-emerald-600' : total >= 60 ? 'text-amber-500' : 'text-rose-500'}`}>{total}</span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-500 truncate mb-2.5">{cand.currentDept} <span className="text-slate-300 mx-1">|</span> {cand.band}</p>
+                    <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-1000 ${total >= 80 ? 'bg-emerald-500' : total >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${total}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="w-full lg:flex-1 flex flex-col justify-center min-w-0 min-h-[130px]">
+                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between h-full">
+                        <div className="overflow-y-auto max-h-[5.5rem] pr-2 mb-3 custom-scroll">
+                          <p className="text-slate-700 font-semibold text-sm leading-relaxed break-keep whitespace-pre-wrap">{summary}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 shrink-0 pt-2 border-t border-slate-200">
+                          {Object.entries(details).map(([k, v]) => (
+                            <div key={k} className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded shadow-sm border border-slate-200">
+                              <span className="text-[11px] font-bold text-slate-500">{k==='exp'?'경험':k==='cert'?'자격':k==='train'?'교육':k==='perf'?'성과':k==='band'?'직급':'전공'}</span>
+                              <span className={`text-xs font-black ${v.score >= 10 ? 'text-sky-600' : 'text-slate-700'}`}>{v.score}</span>
+                            </div>
+                          ))}
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="w-full lg:w-56 flex flex-col gap-2 justify-center pl-0 lg:pl-5 border-l-0 lg:border-l border-slate-200 flex-shrink-0">
+                    <div className="flex gap-2">
+                      <button onClick={() => setDecisions(p => ({...p, [cand.id]: {...dec, status: 'approve'}}))} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all border-2 ${dec.status==='approve' ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-emerald-300'}`}><CheckCircle className="w-4 h-4" /> 적합</button>
+                      <button onClick={() => setDecisions(p => ({...p, [cand.id]: {...dec, status: 'reject'}}))} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all border-2 ${dec.status==='reject' ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-rose-300'}`}><XCircle className="w-4 h-4" /> 제외</button>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute top-1/2 -translate-y-1/2 left-3 text-slate-400"><MessageSquare className="w-4 h-4" /></div>
+                      <input type="text" placeholder="인사 검토 의견..." value={dec.memo || ''} onChange={(e) => setDecisions(prev => ({...prev, [cand.id]: {...dec, memo: e.target.value}}))} className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2.5 text-xs font-medium focus:bg-white focus:border-sky-500 focus:ring-2 outline-none placeholder:text-slate-400" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderTransferTabContent = () => (
+    <div className="animate-in fade-in duration-500 space-y-6">
+      <div className="flex justify-center md:justify-start">
+        <div className="flex bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+          <button onClick={() => setActiveTab('jobSelection')} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'jobSelection' ? 'bg-sky-50 text-sky-700' : 'text-slate-500 hover:text-slate-800'}`}>1. 타겟 직무 및 후보자 등록</button>
+          <button onClick={() => setActiveTab('ranking')} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'ranking' ? 'bg-sky-50 text-sky-700' : 'text-slate-500 hover:text-slate-800'}`}>2. AI 적합도 리포트</button>
+        </div>
+      </div>
+      {activeTab === 'jobSelection' && (
+        <div className="space-y-6">
+          {renderJobSelection()}
+          {renderJobCriteria()}
+          {renderCandidateRegBox("transfer")}
+        </div>
+      )}
+      {activeTab === 'ranking' && (
+        <div className="space-y-6">
+          {renderJobCriteria()}
+          {renderRanking()}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPromoTabContent = () => {
+    const promoGroup1 = analyzedPromo.filter(cand => BAND_LEVELS[cand.band] <= 4);
+    const promoGroup2 = analyzedPromo.filter(cand => BAND_LEVELS[cand.band] >= 5);
+
+    const renderPromoCard = (cand, idx) => {
+      const { score, maxScore, details, summary, isLeader, isEligible, evals, isUpwardTrend } = cand.evaluation;
+      const isPassed = isEligible && (score >= (maxScore * 0.8)); 
+      return (
+        <div key={cand.id} className={`relative flex flex-col lg:flex-row items-center border-2 rounded-xl p-4 gap-4 bg-white shadow-sm transition-all ${isEligible ? 'border-slate-100 hover:border-sky-200' : 'border-rose-200 opacity-90'}`}>
+          <div className="w-full lg:w-48 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-100 pb-3 lg:pb-0 lg:pr-4">
+            <div className="flex justify-between items-start mb-1">
+              <div><h3 className="text-lg font-black text-slate-800 flex items-center gap-1.5">{idx+1}. {cand.name}</h3><p className="text-xs font-bold text-slate-500">{cand.dept} | {cand.band}</p></div>
+              {isEligible ? <span className={`text-2xl font-black ${isPassed?'text-sky-600':'text-slate-600'}`}>{score}</span> : <span className="text-xs font-black text-rose-500 mt-1">기본요건 미달</span>}
+            </div>
+            <div className="flex items-end justify-between mt-2 mb-2 border-t border-slate-100 pt-2">
+              {renderSparkline([...evals].reverse())}
+              <span className={`text-[9px] px-1.5 py-0.5 rounded flex-shrink-0 ${isEligible?'bg-slate-100 text-slate-600':'bg-rose-50 text-rose-600'}`}>{isLeader?'800점':'500점'}</span>
+            </div>
+            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${isEligible?(isPassed?'bg-sky-500':'bg-slate-400'):'bg-rose-500'}`} style={{ width: `${isEligible ? Math.min((score/maxScore)*100, 100) : 100}%` }} /></div>
+          </div>
+          <div className="w-full lg:flex-1">
+            <p className={`text-xs font-semibold mb-2 p-2 rounded-lg break-keep ${isEligible?'bg-slate-50 text-slate-700':'bg-rose-50 text-rose-700 border border-rose-100'}`}>{summary}</p>
+            <div className="flex flex-wrap gap-1.5">
+              <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-600">성과: {details.perf} {isUpwardTrend && <span className="text-sky-600">(우상향 +10)</span>}</span>
+              <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-sky-600">직무: {details.jobPerform}</span>
+              <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-sky-600">포상: {details.awards}</span>
+              {details.underC < 0 && <span className="text-[10px] font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-rose-600">연속저평가: -10</span>}
+              <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-emerald-600">태도/제도: {details.collab + details.attendance}</span>
+              {details.penalty > 0 && <span className="text-[10px] font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-rose-600">징계: -30</span>}
+              <span className="text-[10px] font-bold bg-sky-50 border border-sky-200 px-2 py-0.5 rounded text-sky-700">가점: {details.culture+details.knowledge+details.leader+details.tf+details.instructor+details.mentoring+details.cert+details.specialist}</span>
+            </div>
+          </div>
+          <div className="w-full lg:w-28 flex-shrink-0 pl-0 lg:pl-4 border-l-0 lg:border-l border-slate-100">
+            <div className={`text-center py-2 rounded-lg text-xs font-black border-2 flex items-center justify-center gap-1 ${!isEligible?'bg-rose-50 border-rose-500 text-rose-700':isPassed?'bg-sky-50 border-sky-500 text-sky-700':'bg-slate-50 border-slate-200 text-slate-500'}`}>
+              {!isEligible && <AlertTriangle className="w-3 h-3" />} {!isEligible?'대상 제외':isPassed?'승급 유력':'점수 미달'}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="animate-in fade-in duration-500 space-y-6">
+        <div className="flex justify-center md:justify-start">
+          <div className="flex bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+            <button onClick={() => setPromoTab('registration')} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${promoTab === 'registration' ? 'bg-sky-50 text-sky-700' : 'text-slate-500 hover:text-slate-800'}`}>1. 승급 대상자 등록</button>
+            <button onClick={() => setPromoTab('report')} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${promoTab === 'report' ? 'bg-sky-50 text-sky-700' : 'text-slate-500 hover:text-slate-800'}`}>2. AI 승급 리포트</button>
+          </div>
+        </div>
+        {promoTab === 'registration' && renderCandidateRegBox("promotion")}
+        {promoTab === 'report' && (
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-gradient-to-r from-sky-50 to-white border-b border-slate-200 px-6 py-5 flex items-center justify-between"><div className="flex items-center gap-3"><div className="bg-sky-100 p-2 rounded-xl text-sky-600"><Award className="w-5 h-5" /></div><h2 className="text-xl font-bold text-slate-800">AI 승급 심사 리포트</h2></div></div>
+            <div className="p-6">
+              {analyzedPromo.length === 0 ? (
+                <div className="text-center py-20 bg-slate-50/80 rounded-2xl border-2 border-slate-200 border-dashed">
+                   <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm border border-slate-200"><TrendingUp className="w-7 h-7 text-sky-500" /></div>
+                   <h3 className="text-xl font-black text-slate-800 mb-2">승급 분석 준비 완료</h3>
+                   <button onClick={handleRunAnalysisLocal} className="bg-sky-600 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-sky-700 mt-6 flex items-center gap-2.5 mx-auto"><PlayCircle className="w-6 h-6" /> 분석 시작</button>
+                 </div>
+              ) : (
+                <div className="space-y-8">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-bold text-sky-900">총 {analyzedPromo.length}명 심사 결과</span>
+                    <button onClick={handleRunAnalysisLocal} className="text-xs font-bold text-sky-700 bg-sky-50 px-3 py-1.5 rounded-lg border border-sky-200 hover:bg-sky-100">↻ 갱신</button>
+                  </div>
+                  {['B2(5) 이하 (실무자)', 'B3(6) 이상 (리더)'].map((groupTitle, gIdx) => {
+                    const group = analyzedPromo.filter(c => gIdx === 0 ? BAND_LEVELS[c.band] <= 4 : BAND_LEVELS[c.band] >= 5);
+                    if(group.length === 0) return null;
+                    return (
+                      <div key={groupTitle} className={gIdx===1 ? "pt-6 border-t border-slate-200" : ""}>
+                        <h4 className={`text-sm font-bold mb-3 flex items-center gap-2 border-b border-slate-200 pb-2 ${gIdx===0?'text-sky-800':'text-sky-800'}`}>
+                          <span className={`px-2.5 py-1 rounded-md text-xs ${gIdx===0?'bg-sky-100 text-sky-700':'bg-sky-200 text-sky-800'}`}>{groupTitle} 타겟</span>
+                          승급 심사 명단
+                        </h4>
+                        <div className="space-y-4">
+                          {group.map((cand, idx) => renderPromoCard(cand, idx))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderLeaderTabContent = () => (
+    <div className="animate-in fade-in duration-500 space-y-6">
+      <div className="flex justify-center md:justify-start">
+        <div className="flex bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+          <button onClick={() => setLeaderTab('registration')} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${leaderTab === 'registration' ? 'bg-sky-50 text-sky-700' : 'text-slate-500 hover:text-slate-800'}`}>1. 직책자 후보 등록</button>
+          <button onClick={() => setLeaderTab('report')} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${leaderTab === 'report' ? 'bg-sky-50 text-sky-700' : 'text-slate-500 hover:text-slate-800'}`}>2. AI 추천 리포트</button>
+        </div>
+      </div>
+      {leaderTab === 'registration' && (
+        <div className="space-y-6">
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4">
+            <div className="bg-gradient-to-r from-sky-50 to-white border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2"><div className="bg-sky-100 p-1.5 rounded-lg text-sky-600"><UserCheck className="w-4 h-4" /></div><h2 className="text-lg font-bold text-slate-800">직책자 필요 부서 및 선호 유형 설정</h2></div>
+            </div>
+            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-2">타겟 본부</label>
+                <select value={leaderTargetHQ} onChange={(e) => {setLeaderTargetHQ(e.target.value); setLeaderTargetDept(getDeptList(e.target.value)[0]);}} className="w-full border border-slate-300 rounded-lg p-2 text-sm font-bold outline-none cursor-pointer focus:border-sky-500">{Object.keys(JOB_DATABASE).map(hq => <option key={hq} value={hq}>{hq}</option>)}</select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-2">타겟 부서 (주요직무 경험 매칭용)</label>
+                <select value={leaderTargetDept} onChange={(e) => setLeaderTargetDept(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2 text-sm font-bold outline-none cursor-pointer focus:border-sky-500">{getDeptList(leaderTargetHQ).map(d => <option key={d} value={d}>{d}</option>)}</select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-2">선호 리더십 유형</label>
+                <select value={prefLeaderType} onChange={(e) => setPrefLeaderType(e.target.value)} className="w-full border border-sky-300 rounded-lg p-2 text-sm font-bold outline-none cursor-pointer bg-sky-50 text-sky-800 focus:border-sky-500">{LEADER_STYLES.map(s => <option key={s} value={s}>{s}</option>)}</select>
+              </div>
+            </div>
+          </div>
+          {renderCandidateRegBox("leadership")}
+        </div>
+      )}
+      {leaderTab === 'report' && (
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-gradient-to-r from-sky-50 to-white border-b border-slate-200 px-6 py-5 flex items-center justify-between"><div className="flex items-center gap-3"><div className="bg-sky-100 p-2 rounded-xl text-sky-600"><Award className="w-5 h-5" /></div><h2 className="text-xl font-bold text-slate-800">AI 직책자 추천 리포트</h2></div></div>
+          <div className="p-6">
+            {analyzedLeader.length === 0 ? (
+              <div className="text-center py-20 bg-slate-50/80 rounded-2xl border-2 border-slate-200 border-dashed">
+                 <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm border border-slate-200"><UserCheck className="w-7 h-7 text-sky-500" /></div>
+                 <h3 className="text-xl font-black text-slate-800 mb-2">분석 준비 완료</h3>
+                 <div className="flex flex-col items-center gap-3 mt-6">
+                   <div className="flex flex-wrap gap-2 justify-center max-w-lg min-h-[32px]">
+                     {leaderJobFilters.map(f => (
+                       <span key={f} className="bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                         {f} <button onClick={() => setLeaderJobFilters(prev => prev.filter(item => item !== f))} className="hover:text-sky-900"><XCircle className="w-3.5 h-3.5" /></button>
+                       </span>
+                     ))}
+                   </div>
+                   <select value="" onChange={e=>{ if(e.target.value && !leaderJobFilters.includes(e.target.value)) setLeaderJobFilters(p=>[...p, e.target.value]); }} className="bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-slate-700 outline-none shadow-sm cursor-pointer focus:border-sky-500 hover:border-sky-300">
+                     <option value="">+ 필수 경험 직무 추가 (다중 선택 가능)</option>
+                     {ALL_UNIQUE_JOB_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                   </select>
+                   <button onClick={handleRunAnalysisLocal} className="bg-sky-600 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-sky-700 flex items-center gap-2.5 mt-2">
+                     <PlayCircle className="w-6 h-6" /> 추천 시작
+                   </button>
+                 </div>
+               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                      <span className="text-sm font-bold text-sky-900">추천 리스트 (100점 만점)</span>
+                      {leaderJobFilters.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                              {leaderJobFilters.map(f => (
+                              <span key={f} className="bg-white border border-sky-200 text-sky-700 px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                                  {f} <button onClick={() => setLeaderJobFilters(prev => prev.filter(item => item !== f))} className="hover:text-sky-900"><XCircle className="w-3 h-3" /></button>
+                              </span>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select value="" onChange={e=>{ if(e.target.value && !leaderJobFilters.includes(e.target.value)) setLeaderJobFilters(p=>[...p, e.target.value]); }} className="bg-white border border-sky-200 rounded-lg px-3 py-1.5 text-xs font-bold text-sky-800 outline-none cursor-pointer">
+                      <option value="">+ 필터 추가</option>
+                      {ALL_UNIQUE_JOB_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <button onClick={handleRunAnalysisLocal} className="text-xs font-bold text-sky-700 bg-sky-50 px-3 py-1.5 rounded-lg border border-sky-200 hover:bg-sky-100">↻ 갱신</button>
+                  </div>
+                </div>
+                {analyzedLeader.map((cand, idx) => {
+                  const { total, details, summary, isRecommended, evals, inferredStyle } = cand.evaluation;
+                  return (
+                    <div key={cand.id} className={`relative flex flex-col lg:flex-row items-center border-2 rounded-xl p-4 gap-4 bg-white shadow-sm transition-all ${isRecommended ? 'border-sky-300' : 'border-slate-200'}`}>
+                      <div className="flex-shrink-0 w-8 flex justify-center"><div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-sm ${idx===0?'bg-sky-500 text-white shadow-md': 'bg-slate-100 text-slate-500'}`}>{idx+1}</div></div>
+                      <div className="w-full lg:w-48 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-100 pb-3 lg:pb-0 lg:pr-4">
+                        <div className="flex justify-between items-center mb-1"><h3 className="text-lg font-black text-slate-800">{cand.name}</h3><span className={`text-2xl font-black ${isRecommended ? 'text-sky-600' : 'text-slate-500'}`}>{total}</span></div>
+                        <p className="text-xs font-bold text-slate-500 mb-2">{cand.currentDept} | {cand.band}</p>
+                        <div className="flex items-end justify-between mt-1 mb-2 border-t border-slate-100 pt-2">
+                           {renderSparkline([...evals].reverse())}
+                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${inferredStyle===prefLeaderType ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-600'}`}>{inferredStyle}</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${isRecommended ? 'bg-sky-500' : 'bg-slate-400'}`} style={{ width: `${total}%` }} /></div>
+                      </div>
+                      <div className="w-full lg:flex-1">
+                        <p className="text-xs font-semibold mb-2 p-2 rounded-lg break-keep bg-slate-50 text-slate-700">{summary}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-sky-600">부서경험: {details.exp}/30</span>
+                          <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-sky-600">평가추이: {details.perf}/25</span>
+                          <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-emerald-600">제도준수: {details.compliance}/15</span>
+                          <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-emerald-600">태도수시: {details.attitude}/15</span>
+                          <span className="text-[10px] font-bold bg-sky-50 border border-sky-200 px-2 py-0.5 rounded text-sky-700">리더매칭: {details.leaderMatch}/15</span>
+                        </div>
+                      </div>
+                      <div className="w-full lg:w-28 flex-shrink-0 pl-0 lg:pl-4 border-l-0 lg:border-l border-slate-100">
+                        <div className={`text-center py-2 rounded-lg text-xs font-black border-2 ${isRecommended ? 'bg-sky-50 border-sky-500 text-sky-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                          {isRecommended ? '추천 적합' : '보류'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#F4F7FA] text-slate-900 font-sans p-4 md:p-8 relative selection:bg-sky-100 selection:text-sky-900">
+      <style dangerouslySetInnerHTML={{ __html: scrollbarStyle }} />
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4"><div className="flex items-center gap-3 mb-3"><div className="bg-rose-100 p-2 rounded-full"><AlertCircle className="w-5 h-5 text-rose-600" /></div><h3 className="text-lg font-black text-slate-800">확인</h3></div><p className="text-sm font-medium text-slate-600 mb-6">{confirmModal.text}</p><div className="flex justify-end gap-2"><button onClick={() => setConfirmModal({isOpen: false, text: '', action: null})} className="px-5 py-2.5 text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl">취소</button><button onClick={confirmModal.action} className="px-5 py-2.5 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl">확인</button></div></div>
+        </div>
+      )}
+      {toast && (
+        <div className="fixed bottom-8 right-8 bg-slate-800/95 backdrop-blur-md text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 z-50"><CheckCircle className="w-5 h-5 text-emerald-400" /><span className="font-bold text-sm tracking-wide">{toast}</span></div>
+      )}
+
+      <div className="max-w-[1400px] mx-auto space-y-6">
+        <header className="bg-white/90 backdrop-blur-xl px-8 py-5 rounded-[24px] shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-5 sticky top-4 z-40">
+          <h1 className="text-2xl font-black text-slate-800 flex items-center gap-3 tracking-tight"><div className="bg-gradient-to-br from-sky-500 to-sky-700 p-2.5 rounded-2xl text-white shadow-lg"><Settings className="w-6 h-6" /></div>HR 인재추천 시스템</h1>
+          <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200 shadow-inner overflow-x-auto">
+            <button onClick={() => setMainCategory('transfer')} className={`flex-shrink-0 flex items-center gap-2 px-6 py-2.5 text-sm font-extrabold rounded-xl transition-all duration-300 ${mainCategory === 'transfer' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}><ArrowRightLeft className="w-4 h-4"/> 사내 이동</button>
+            <button onClick={() => setMainCategory('promotion')} className={`flex-shrink-0 flex items-center gap-2 px-6 py-2.5 text-sm font-extrabold rounded-xl transition-all duration-300 ${mainCategory === 'promotion' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}><TrendingUp className="w-4 h-4"/> 승급 심사</button>
+            <button onClick={() => setMainCategory('leadership')} className={`flex-shrink-0 flex items-center gap-2 px-6 py-2.5 text-sm font-extrabold rounded-xl transition-all duration-300 ${mainCategory === 'leadership' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}><UserCheck className="w-4 h-4"/> 직책자 추천</button>
+          </div>
+          <button onClick={handleResetAll} className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-rose-500 px-3 py-2 bg-slate-50 rounded-xl hover:bg-rose-50" title="초기화"><RotateCcw className="w-4 h-4" /></button>
+        </header>
+
+        {mainCategory === 'transfer' && renderTransferTabContent()}
+        {mainCategory === 'promotion' && renderPromoTabContent()}
+        {mainCategory === 'leadership' && renderLeaderTabContent()}
+      </div>
+    </div>
+  );
+}
